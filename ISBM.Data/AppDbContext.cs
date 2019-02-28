@@ -16,6 +16,7 @@ namespace ISBM.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<MessagesSession>().HasKey(t => new { t.MessageId, t.SessionId });
+            modelBuilder.Entity<ChannelsSecurityTokens>().HasKey(cst => new { cst.SecurityTokenId, cst.ChannelId });
             modelBuilder.Entity<ChannelsSecurityTokens>().HasOne(cst => cst.SecurityToken).WithMany(st => st.ChannelsSecurityTokens).HasForeignKey(cst => cst.SecurityTokenId);
             modelBuilder.Entity<ChannelsSecurityTokens>().HasOne(cst => cst.Channel).WithMany(c => c.ChannelsSecurityTokens).HasForeignKey(cst => cst.ChannelId);
         }
