@@ -12,22 +12,21 @@ namespace ISBM.Web.Services
     {
         protected readonly IMapper mapper;
         protected readonly DbContext appDbContext;
-        private IDictionary<string, string> _header { get; set; }
+        private string _accessToken { get; set; }
         public ServiceBase(DbContext dbContext, IMapper mapper)
         {
             this.mapper = mapper;
             this.appDbContext = dbContext;
-            _header = new Dictionary<string, string>();
         }
 
-        public void SetHeaderInformation(IDictionary<string, string> header)
+        public void SetAccessToken(string token)
         {
-            this._header = header;
+            this._accessToken = token;
         }
 
-        protected string GetHeaderSecurityToken()
+        protected string GetAccessToken()
         {
-            return _header.ContainsKey("Security") ? _header["Security"] : string.Empty;
+            return _accessToken;
         }
     }
 }
