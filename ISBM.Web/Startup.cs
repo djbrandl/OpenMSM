@@ -1,4 +1,5 @@
 using AutoMapper;
+using ISBM.Web.Mapping;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +23,7 @@ namespace ISBM.Web
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<ISBM.Data.AppDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+            //services.AddScoped<ISBM.Data.AppDbContext>();
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
@@ -30,7 +32,6 @@ namespace ISBM.Web
             });
 
             var mapper = mapperConfig.CreateMapper();
-
             services.AddSingleton(mapper);
 
             // In production, the React files will be served from this directory
@@ -60,6 +61,10 @@ namespace ISBM.Web
 
             app.UseMvc(routes =>
             {
+                routes.MapRoute(
+                    name: "SecurityTokens",
+                    template: "Channels/{id}/security-tokens",
+                    new { controller = "Channels", action = "SecurityTokens"});
                 routes.MapRoute(
                     name: "default",
                     template: "{controller}/{action=Index}/{id?}");

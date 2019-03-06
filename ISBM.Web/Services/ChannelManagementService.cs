@@ -22,7 +22,7 @@ namespace ISBM.Web.Services
 
         private bool DoPermissionsMatchChannel(ISBM.Data.Models.Channel channel)
         {
-            var permissionsToken = this.GetHeaderSecurityToken();
+            var permissionsToken = this.GetAccessToken();
             return !(channel.ChannelsSecurityTokens.Any() && !channel.ChannelsSecurityTokens.Select(m => m.SecurityToken?.Token).Contains(permissionsToken));
         }
 
@@ -67,7 +67,7 @@ namespace ISBM.Web.Services
             {
                 throw new ChannelFaultException("Provided header security token does not match the token assigned to the channel.");
             }
-            AssociateTokensToChannel(channel, SecurityToken.Select(m => m.ToString()));
+            AssociateTokensToChannel(channel, SecurityToken.Select(m => m.OuterXml));
             appDbContext.SaveChanges();
         }
 
@@ -90,7 +90,7 @@ namespace ISBM.Web.Services
                 ChannelsSecurityTokens = new List<ISBM.Data.Models.ChannelsSecurityTokens>()
             };
 
-            AssociateTokensToChannel(channel, SecurityToken.Select(m => m.ToString()));
+            AssociateTokensToChannel(channel, SecurityToken.Select(m => m.OuterXml));
             appDbContext.Add(channel);
             appDbContext.SaveChanges();
         }
@@ -130,7 +130,7 @@ namespace ISBM.Web.Services
 
         public Channel[] GetChannels()
         {
-            var permissionToken = this.GetHeaderSecurityToken();
+            var permissionToken = this.GetAccessToken();
             var channels = this.appDbContext.Set<ISBM.Data.Models.SecurityToken>().Where(m => m.Token == permissionToken).SelectMany(m => m.ChannelsSecurityTokens).Select(m => m.Channel);
             var noSecurityChannels = this.appDbContext.Set<ISBM.Data.Models.Channel>().Where(m => !m.ChannelsSecurityTokens.Any());
             return channels.Union(noSecurityChannels).Select(m => mapper.Map<ISBM.ServiceDefinitions.Channel>(m)).ToArray();
@@ -157,7 +157,7 @@ namespace ISBM.Web.Services
                 return;
             }
             var existingAssignedTokens = channel.ChannelsSecurityTokens.Select(m => m.SecurityToken.Token);
-            var inputTokens = SecurityToken.Select(m => m.ToString());
+            var inputTokens = SecurityToken.Select(m => m.OuterXml);
             if (inputTokens.Count() != existingAssignedTokens.Intersect(inputTokens).Count())
             {
                 throw new SecurityTokenFaultException("One or more of the provided security tokens are not assigned to the channel.");
