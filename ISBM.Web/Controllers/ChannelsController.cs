@@ -5,8 +5,10 @@ using System.Threading.Tasks;
 using System.Xml;
 using AutoMapper;
 using ISBM.Data;
+using ISBM.ServiceDefinitions;
 using ISBM.Web.Models;
 using ISBM.Web.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -32,7 +34,7 @@ namespace ISBM.Web.Controllers
             {
                 _service.SetAccessToken(authHeader.Value.ToString().ToXmlElement().OuterXml);
             }
-            
+
             base.OnActionExecuting(context);
         }
 
@@ -43,37 +45,87 @@ namespace ISBM.Web.Controllers
         }
 
         [HttpGet("{channelUri}")]
-        public ISBM.Web.Models.Channel Get(string channelUri)
+        [ProducesResponseType(typeof(ISBM.Web.Models.Channel), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult Get(string channelUri)
         {
-            var channel = _service.GetChannel(channelUri);
-            return mapper.Map<ISBM.Web.Models.Channel>(channel);
+            try
+            {
+                var channel = _service.GetChannel(System.Net.WebUtility.UrlDecode(channelUri));
+                return Ok(mapper.Map<ISBM.Web.Models.Channel>(channel));
+            }
+            catch (ChannelFaultException e)
+            {
+                return NotFound(new { message = e.Message });
+            }
         }
 
         [HttpPost]
-        public void Post([FromBody]ISBM.Web.Models.Channel channel)
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult Post([FromBody]ISBM.Web.Models.Channel channel)
         {
-            var tokens = channel.SecurityTokens == null ? new XmlElement[0] : channel.SecurityTokens.Select(m => m.Token).ToXmlElements(); 
-            _service.CreateChannel(channel.Uri, channel.Type, channel.Description, tokens);
+            try
+            {
+                var tokens = channel.SecurityTokens == null ? new XmlElement[0] : channel.SecurityTokens.Select(m => m.Token).ToXmlElements();
+                _service.CreateChannel(channel.Uri, channel.Type, channel.Description, tokens);
+                return Created(string.Empty, null);
+            }
+            catch (ChannelFaultException e)
+            {
+                return NotFound(new { message = e.Message });
+            }
         }
 
         [HttpDelete("{channelUri}")]
-        public void Delete(string channelUri)
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult Delete(string channelUri)
         {
-            _service.DeleteChannel(channelUri);
+            try
+            {
+                _service.DeleteChannel(System.Net.WebUtility.UrlDecode(channelUri));
+                return NoContent();
+            }
+            catch (ChannelFaultException e)
+            {
+                return NotFound(new { message = e.Message });
+            }
         }
 
         [HttpPost("{channelUri}/security-tokens")]
-        public void AddSecurityTokens(string channelUri, [FromBody]SecurityToken[] securityTokens)
+
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult AddSecurityTokens(string channelUri, [FromBody]SecurityToken[] securityTokens)
         {
-            var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
-            _service.AddSecurityTokens(channelUri, tokens);            
+            try
+            {
+                var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
+                _service.AddSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri), tokens);
+                return Created(string.Empty, null);
+            }
+            catch (ChannelFaultException e)
+            {
+                return NotFound(new { message = e.Message });
+            }
         }
 
         [HttpDelete("{channelUri}/security-tokens")]
-        public void DeleteSecurityTokens(string channelUri, [FromBody]SecurityToken[] securityTokens)
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult RemoveSecurityTokens(string channelUri, [FromBody]SecurityToken[] securityTokens)
         {
-            var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
-            _service.RemoveSecurityTokens(channelUri, tokens);
+            try
+            {
+                var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
+                _service.RemoveSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri), tokens);
+                return NoContent();
+            }
+            catch (ChannelFaultException e)
+            {
+                return NotFound(new { message = e.Message });
+            }
         }
     }
 }

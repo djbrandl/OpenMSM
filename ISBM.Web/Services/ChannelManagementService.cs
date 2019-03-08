@@ -30,8 +30,8 @@ namespace ISBM.Web.Services
         private void AssociateTokensToChannel(ISBM.Data.Models.Channel channel, IEnumerable<string> securityTokens)
         {
             var tokens = securityTokens.Distinct();
-            var existingSecurityTokens = appDbContext.Set<ISBM.Data.Models.SecurityToken>().ToList();
-            var tokensToLink = existingSecurityTokens.Where(m => tokens.Contains(m.Token));
+            var existingSecurityTokens = appDbContext.Set<ISBM.Data.Models.SecurityToken>().Include(m => m.ChannelsSecurityTokens).ToList();
+            var tokensToLink = existingSecurityTokens.Where(m => tokens.Contains(m.Token) && !m.ChannelsSecurityTokens.Any(v => v.ChannelId == channel.Id));
             var tokensToAdd = tokens.Where(m => !existingSecurityTokens.Select(v => v.Token).Contains(m));
             foreach (var tokenToAdd in tokensToAdd)
             {
