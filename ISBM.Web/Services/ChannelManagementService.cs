@@ -17,7 +17,8 @@ namespace ISBM.Web.Services
         #region Private Methods
         private ISBM.Data.Models.Channel GetChannelByUri(string channelUri)
         {
-            return this.appDbContext.Set<ISBM.Data.Models.Channel>().FirstOrDefault(m => m.URI.ToLower() == channelUri.ToLower());
+            return this.appDbContext.Set<ISBM.Data.Models.Channel>()
+                            .Include(m => m.ChannelsSecurityTokens).ThenInclude(cst => cst.SecurityToken).FirstOrDefault(m => m.URI.ToLower() == channelUri.ToLower());
         }
 
         private bool DoPermissionsMatchChannel(ISBM.Data.Models.Channel channel)
@@ -162,7 +163,7 @@ namespace ISBM.Web.Services
             {
                 throw new SecurityTokenFaultException("One or more of the provided security tokens are not assigned to the channel.");
             }
-            foreach(var tokenLink in channel.ChannelsSecurityTokens.Where(m => inputTokens.Contains(m.SecurityToken.Token)))
+            foreach (var tokenLink in channel.ChannelsSecurityTokens.Where(m => inputTokens.Contains(m.SecurityToken.Token)))
             {
                 channel.ChannelsSecurityTokens.Remove(tokenLink);
             }
