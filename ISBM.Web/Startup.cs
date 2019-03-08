@@ -2,11 +2,14 @@ using AutoMapper;
 using ISBM.Web.Mapping;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing.Constraints;
 using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+
 
 namespace ISBM.Web
 {
@@ -47,6 +50,7 @@ namespace ISBM.Web
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseCors(builder => builder.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
             }
             else
             {
@@ -59,17 +63,8 @@ namespace ISBM.Web
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
 
-            app.UseMvc(routes =>
-            {
-                routes.MapRoute(
-                    name: "SecurityTokens",
-                    template: "Channels/{id}/security-tokens",
-                    new { controller = "Channels", action = "SecurityTokens"});
-                routes.MapRoute(
-                    name: "default",
-                    template: "{controller}/{action=Index}/{id?}");
-            });
-
+            app.UseMvc();
+            
             app.UseSpa(spa =>
             {
                 spa.Options.SourcePath = "ClientApp";

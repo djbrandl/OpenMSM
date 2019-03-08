@@ -5,11 +5,10 @@ using System.Threading.Tasks;
 using System.Xml;
 using AutoMapper;
 using ISBM.Data;
+using ISBM.Web.Models;
 using ISBM.Web.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace ISBM.Web.Controllers
 {
@@ -17,63 +16,64 @@ namespace ISBM.Web.Controllers
     public class ChannelsController : ControllerBase
     {
         private XmlElement _accessToken { get; set; }
+        private ChannelManagementService _service { get; set; }
 
         public ChannelsController(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper)
         {
-            var t = new XmlDocument();
-            t.LoadXml("<Root><Username>Foo</Username><Password>Bar</Password></Root>");
-            _accessToken = t.DocumentElement;
+            _service = new ChannelManagementService(dbContext, mapper);
         }
 
-        // GET: api/<controller>
-        [HttpGet]
-        public IEnumerable<ServiceDefinitions.Channel> Get()
+        public override void OnActionExecuting(ActionExecutingContext context)
         {
-            var service = new ChannelManagementService(dbContext, mapper);
-            service.SetAccessToken(_accessToken.OuterXml);
-            //service.CreateChannel("Foo", ServiceDefinitions.ChannelType.Publication, "Bar", new[] { _accessToken });
-            return service.GetChannels();
-        }
+            var authHeader = context.HttpContext.Request.Headers.FirstOrDefault(m => m.Key == "Authorization");
 
-        // get channel
-        [HttpGet("{id}")]
-        public ServiceDefinitions.Channel Get(int id)
-        {
-            var header = this.Request.Headers.FirstOrDefault(m => m.Key == "Authorization");
-
-            var dto = new Data.Models.Channel
+            // checking null on the key as the KeyValuePair<T,T> is a struct and initialized with default <null, 0>
+            if (!string.IsNullOrWhiteSpace(authHeader.Key))
             {
-                Id = Guid.NewGuid(),
-                URI = "Foo 123"
-            };
-            var mapped = mapper.Map<ServiceDefinitions.Channel>(dto);
-            return mapped;
+                _service.SetAccessToken(authHeader.Value.ToString().ToXmlElement().OuterXml);
+            }
+            
+            base.OnActionExecuting(context);
         }
 
-        // create channel
-        [HttpPost]
-        public void Post([FromBody]string value)
+        [HttpGet]
+        public IEnumerable<ISBM.Web.Models.Channel> Get()
         {
-
+            return _service.GetChannels().Select(m => mapper.Map<ISBM.Web.Models.Channel>(m));
         }
 
-        // delete channel
-        [HttpDelete("{id}")]
-        public void Delete(int id)
+        [HttpGet("{channelUri}")]
+        public ISBM.Web.Models.Channel Get(string channelUri)
         {
-
+            var channel = _service.GetChannel(channelUri);
+            return mapper.Map<ISBM.Web.Models.Channel>(channel);
         }
 
         [HttpPost]
-        public void SecurityTokens(string id, [FromBody]string[] securityTokens)
+        public void Post([FromBody]ISBM.Web.Models.Channel channel)
         {
-
+            var tokens = channel.SecurityTokens == null ? new XmlElement[0] : channel.SecurityTokens.Select(m => m.Token).ToXmlElements(); 
+            _service.CreateChannel(channel.Uri, channel.Type, channel.Description, tokens);
         }
 
-        [HttpDelete("{id}")]
-        public void SecurityTokens(string id)
+        [HttpDelete("{channelUri}")]
+        public void Delete(string channelUri)
         {
+            _service.DeleteChannel(channelUri);
+        }
 
+        [HttpPost("{channelUri}/security-tokens")]
+        public void AddSecurityTokens(string channelUri, [FromBody]SecurityToken[] securityTokens)
+        {
+            var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
+            _service.AddSecurityTokens(channelUri, tokens);            
+        }
+
+        [HttpDelete("{channelUri}/security-tokens")]
+        public void DeleteSecurityTokens(string channelUri, [FromBody]SecurityToken[] securityTokens)
+        {
+            var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
+            _service.RemoveSecurityTokens(channelUri, tokens);
         }
     }
 }

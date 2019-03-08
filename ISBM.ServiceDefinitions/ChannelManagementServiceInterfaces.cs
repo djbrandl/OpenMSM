@@ -31,44 +31,8 @@ namespace ISBM.ServiceDefinitions
 
     public partial class Channel
     {
-        private string channelURIField;
-        private ChannelType channelTypeField;
-        private string channelDescriptionField;
-
-        public string ChannelURI
-        {
-            get
-            {
-                return this.channelURIField;
-            }
-            set
-            {
-                this.channelURIField = value;
-            }
-        }
-
-        public ChannelType ChannelType
-        {
-            get
-            {
-                return this.channelTypeField;
-            }
-            set
-            {
-                this.channelTypeField = value;
-            }
-        }
-
-        public string ChannelDescription
-        {
-            get
-            {
-                return this.channelDescriptionField;
-            }
-            set
-            {
-                this.channelDescriptionField = value;
-            }
-        }
+        public string ChannelURI { get; set; }
+        public ChannelType ChannelType { get; set; }
+        public string ChannelDescription { get; set; }        
     }
 }

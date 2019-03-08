@@ -17,8 +17,8 @@ namespace ISBM.Data
         {
             modelBuilder.Entity<MessagesSession>().HasKey(t => new { t.MessageId, t.SessionId });
             modelBuilder.Entity<ChannelsSecurityTokens>().HasKey(cst => new { cst.SecurityTokenId, cst.ChannelId });
-            modelBuilder.Entity<ChannelsSecurityTokens>().HasOne(cst => cst.SecurityToken).WithMany(st => st.ChannelsSecurityTokens).HasForeignKey(cst => cst.SecurityTokenId);
-            modelBuilder.Entity<ChannelsSecurityTokens>().HasOne(cst => cst.Channel).WithMany(c => c.ChannelsSecurityTokens).HasForeignKey(cst => cst.ChannelId);
+            //modelBuilder.Entity<ChannelsSecurityTokens>().HasOne(cst => cst.SecurityToken).WithMany(st => st.ChannelsSecurityTokens).HasForeignKey(cst => cst.SecurityTokenId);
+            //modelBuilder.Entity<ChannelsSecurityTokens>().HasOne(cst => cst.Channel).WithMany(c => c.ChannelsSecurityTokens).HasForeignKey(cst => cst.ChannelId);
         }
 
         public DbSet<Channel> Channels { get; set; }

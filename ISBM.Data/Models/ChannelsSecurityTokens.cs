@@ -7,7 +7,7 @@ namespace ISBM.Data.Models
         public Guid ChannelId { get; set; }
         public Guid SecurityTokenId { get; set; }
 
-        public virtual Channel Channel { get; set; }
-        public virtual SecurityToken SecurityToken { get; set; }
+        public Channel Channel { get; set; }
+        public SecurityToken SecurityToken { get; set; }
     }
 }
