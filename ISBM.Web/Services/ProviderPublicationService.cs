@@ -67,15 +67,15 @@ namespace ISBM.Web.Services
             {
                 throw new ChannelFaultException("Provided header security token does not match the token assigned to the channel.");
             }
-            if (channel.Type != (int)ChannelType.Publication)
+            if (channel.Type != ISBM.Data.Models.ChannelType.Publication)
             {
                 throw new OperationFaultException("Channel type is not of type \"Publication\".");
             }
             var session = new Session
             {
-                                ChannelId = channel.Id,
-                                Type = (int)SessionType.Publisher
-                            };
+                ChannelId = channel.Id,
+                Type = (int)SessionType.Publisher
+            };
             this.appDbContext.Set<Session>().Add(session);
             this.appDbContext.SaveChanges();
             return session.Id.ToString();
@@ -92,32 +92,44 @@ namespace ISBM.Web.Services
             {
                 throw new SessionFaultException("A session with the specified ID does not exist.");
             }
+            if (session.Type != SessionType.Publisher)
+            {
+                throw new SessionFaultException("The session specified is not a Publication session.");
+            }
             if (!DoPermissionsMatchSession(session))
             {
                 throw new SessionFaultException("Provided header security token does not match the token assigned to the session's channel.");
             }
+
+            // get all subscribers for this session
             var subscriberSessions = this.appDbContext.Set<Session>()
-                .Where(m => m.Type == (int)SessionType.Subscriber && m.ChannelId == session.ChannelId)
+                .Where(m => m.Type == SessionType.Subscriber && m.ChannelId == session.ChannelId)
                 .Select(m => m.Id);
+
+            // create a message
             var message = new Message
             {
-                Id = Guid.NewGuid(),
                 CreatedOn = DateTime.UtcNow,
                 CreatedBySessionId = session.Id,
-                Type = (int)MessageType.Publication,
+                Type = MessageType.Publication,
                 MessageBody = MessageContent.OuterXml,
                 MessageTopics = Topic.Select(m =>
                     new MessageTopic
                     {
                         Topic = m
-                    }).ToList(),
-                MessagesSessions = subscriberSessions.Select(m => new MessagesSession
-                {
-                    SessionId = m
-                }).ToArray()  
+                    }).ToList()
             };
 
-            return string.Empty;
+            // link subscriber sessions to the new message
+            message.MessagesSessions = subscriberSessions.Select(m => new MessagesSession
+            {
+                SessionId = m
+            }).ToList();
+
+            this.appDbContext.Add(message);
+            this.appDbContext.SaveChanges();
+
+            return message.Id.ToString();
         }
     }
 }

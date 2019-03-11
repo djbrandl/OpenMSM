@@ -17,6 +17,9 @@ namespace ISBM.Data
         {
             modelBuilder.Entity<MessagesSession>().HasKey(t => new { t.MessageId, t.SessionId });
             modelBuilder.Entity<ChannelsSecurityTokens>().HasKey(cst => new { cst.SecurityTokenId, cst.ChannelId });
+            modelBuilder.Entity<Session>().Property(m => m.Type).HasConversion<int>();
+            modelBuilder.Entity<Channel>().Property(m => m.Type).HasConversion<int>();
+            modelBuilder.Entity<Message>().Property(m => m.Type).HasConversion<int>();
             //modelBuilder.Entity<ChannelsSecurityTokens>().HasOne(cst => cst.SecurityToken).WithMany(st => st.ChannelsSecurityTokens).HasForeignKey(cst => cst.SecurityTokenId);
             //modelBuilder.Entity<ChannelsSecurityTokens>().HasOne(cst => cst.Channel).WithMany(c => c.ChannelsSecurityTokens).HasForeignKey(cst => cst.ChannelId);
         }
@@ -29,5 +32,6 @@ namespace ISBM.Data
         public DbSet<MessageTopic> MessageTopics { get; set; }
         public DbSet<Session> Sessions { get; set; }
         public DbSet<SessionTopic> SessionTopics { get; set; }
+        public DbSet<SessionNamespace> SessionNamespaces { get; set; }
     }
 }
