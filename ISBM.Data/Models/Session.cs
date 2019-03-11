@@ -7,6 +7,7 @@ namespace ISBM.Data.Models
         public SessionType Type { get; set; }
         public string ListenerURI { get; set; }
         public string XPathExpression { get; set; }
+        public bool IsClosed { get; set; }
 
         public virtual Channel Channel { get; set; }
         public virtual ICollection<Message> Messages { get; set; }
