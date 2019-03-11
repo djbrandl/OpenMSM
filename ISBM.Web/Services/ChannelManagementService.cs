@@ -85,7 +85,7 @@ namespace ISBM.Web.Services
 
             var channel = new ISBM.Data.Models.Channel
             {
-                Type = (int)ChannelType,
+                Type = ChannelType == ChannelType.Publication ? Data.Models.ChannelType.Publication : Data.Models.ChannelType.Request,
                 URI = ChannelURI,
                 Description = ChannelDescription,
                 ChannelsSecurityTokens = new List<ISBM.Data.Models.ChannelsSecurityTokens>()

@@ -13,7 +13,7 @@ namespace ISBM.Data.Models
         }
     
         public Guid CreatedBySessionId { get; set; }
-        public int Type { get; set; }
+        public MessageType Type { get; set; }
         public DateTime? ExpiresOn { get; set; }
         public DateTime CreatedOn { get; set; }
         public string MessageBody { get; set; }

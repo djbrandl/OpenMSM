@@ -6,7 +6,7 @@ namespace ISBM.Data.Models
     public partial class Channel : BaseEntity
     {    
         public string URI { get; set; }
-        public int Type { get; set; }
+        public ChannelType Type { get; set; }
         public string Description { get; set; }
         
         public virtual ICollection<ChannelsSecurityTokens> ChannelsSecurityTokens { get; set; }

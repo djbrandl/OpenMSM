@@ -39,7 +39,7 @@ namespace ISBM.Web.Services
             var session = new Session
             {
                 Id = Guid.NewGuid(),
-                Type = (int)SessionType.Subscriber,
+                Type = SessionType.Subscriber,
                 ChannelId = channel.Id,
                 ListenerURI = ListenerURL,
                 SessionTopics = Topic == null ? new SessionTopic[0] : Topic.Select(m => new SessionTopic
