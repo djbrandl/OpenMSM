@@ -30,8 +30,8 @@ namespace ISBM.Web.Services
 
         private ISBM.Data.Models.Session GetSessionById(Guid sessionId)
         {
-            return this.appDbContext.Set<ISBM.Data.Models.Session>()
-                            .Include(m => m.Channel).ThenInclude(m => m.ChannelsSecurityTokens).ThenInclude(cst => cst.SecurityToken).FirstOrDefault(m => m.Id == sessionId);
+            return this.appDbContext.Set<ISBM.Data.Models.Session>().Include(m => m.Channel)
+                .ThenInclude(m => m.ChannelsSecurityTokens).ThenInclude(cst => cst.SecurityToken).FirstOrDefault(m => m.Id == sessionId);
         }
 
         private bool DoPermissionsMatchSession(ISBM.Data.Models.Session session)
@@ -40,16 +40,62 @@ namespace ISBM.Web.Services
             return !(session.Channel.ChannelsSecurityTokens.Any() && !session.Channel.ChannelsSecurityTokens.Select(m => m.SecurityToken?.Token).Contains(permissionsToken));
         }
 
+        private Session CheckSession(string sessionID)
+        {
+            if (string.IsNullOrWhiteSpace(sessionID))
+            {
+                throw new SessionFaultException("SessionID cannot be null or empty.", new ArgumentNullException("SessionID"));
+            }
+            var session = GetSessionById(new Guid(sessionID));
+            if (session == null)
+            {
+                throw new SessionFaultException("A session with the specified ID does not exist.");
+            }
+            if (session.Type != SessionType.Publisher)
+            {
+                throw new SessionFaultException("The session specified is not a Publication session.");
+            }
+            if (session.IsClosed)
+            {
+                throw new SessionFaultException("The session specified is closed.");
+            }
+            if (!DoPermissionsMatchSession(session))
+            {
+                throw new SessionFaultException("Provided header security token does not match the token assigned to the session's channel.");
+            }
+            return session;
+        }
+
         #endregion
 
         public void ClosePublicationSession(string SessionID)
         {
-            throw new NotImplementedException();
+            var session = CheckSession(SessionID);
+            session.IsClosed = true;
+
+            // due to lazy loading not working in Entity Framework Core at time of coding, I am making an extra call here.
+            var messages = this.appDbContext.Set<Message>().Where(m => m.CreatedBySessionId == session.Id).ToList();
+
+            // expire every message for the session that is not already expired
+            foreach(var message in messages.Where(m => !m.ExpiredByCreatorOn.HasValue))
+            {
+                message.ExpiredByCreatorOn = DateTime.UtcNow;
+            }
+
+            this.appDbContext.SaveChanges();
         }
 
         public void ExpirePublication(string SessionID, string MessageID)
         {
-            throw new NotImplementedException();
+            var session = CheckSession(SessionID);
+            var message = this.appDbContext.Set<Message>().FirstOrDefault(m => m.CreatedBySessionId == session.Id);
+            if (message == null)
+            {
+                return;
+            }
+
+            message.ExpiredByCreatorOn = DateTime.UtcNow;
+            appDbContext.SaveChanges();
         }
 
         public string OpenPublicationSession(string ChannelURI)
@@ -83,23 +129,7 @@ namespace ISBM.Web.Services
 
         public string PostPublication(string SessionID, XmlElement MessageContent, [XmlElement("Topic")] string[] Topic, [XmlElement(DataType = "duration")] string Expiry)
         {
-            if (string.IsNullOrWhiteSpace(SessionID))
-            {
-                throw new SessionFaultException("SessionID cannot be null or empty.", new ArgumentNullException("SessionID"));
-            }
-            var session = GetSessionById(new Guid(SessionID));
-            if (session == null)
-            {
-                throw new SessionFaultException("A session with the specified ID does not exist.");
-            }
-            if (session.Type != SessionType.Publisher)
-            {
-                throw new SessionFaultException("The session specified is not a Publication session.");
-            }
-            if (!DoPermissionsMatchSession(session))
-            {
-                throw new SessionFaultException("Provided header security token does not match the token assigned to the session's channel.");
-            }
+            var session = CheckSession(SessionID);
 
             // get all subscribers for this session
             var subscriberSessions = this.appDbContext.Set<Session>()
