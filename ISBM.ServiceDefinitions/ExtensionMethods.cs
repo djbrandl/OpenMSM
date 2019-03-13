@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Xml;
 
-namespace ISBM.Web
+namespace ISBM.ServiceDefinitions
 {
     public static class ExtensionMethods
     {
