@@ -84,12 +84,18 @@ namespace ISBM.Web.Services
 
             // filter the sessions so that we only get subscribers that have any of the same topics as the posted message
             subscriberSessions = subscriberSessions.Where(m => m.SessionTopics.Select(v => v.Topic).Intersect(Topic).Any()).ToList();
-
+            DateTime? expiration = null;
+            if (!string.IsNullOrWhiteSpace(Expiry))
+            {
+                var expirationTimeSpan = XmlConvert.ToTimeSpan(Expiry);
+                expiration = DateTime.UtcNow.Add(expirationTimeSpan);
+            }
             // create a message
             var message = new Message
             {
                 CreatedOn = DateTime.UtcNow,
                 CreatedBySessionId = session.Id,
+                ExpiresOn = expiration,
                 Type = MessageType.Publication,
                 MessageBody = MessageContent.OuterXml,
                 MessageTopics = Topic.Select(m =>

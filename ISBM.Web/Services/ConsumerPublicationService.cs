@@ -17,6 +17,57 @@ namespace ISBM.Web.Services
     {
         public ConsumerPublicationService(DbContext dbContext, IMapper mapper) : base(dbContext, mapper) { }
 
+        #region Private Methods
+
+        private XmlElement EvalateFilter(XmlElement messageContent, IList<ISBM.Data.Models.SessionNamespace> namespaces, string xPathExpression)
+        {
+            // If there is no filtering of message content
+            if (string.IsNullOrWhiteSpace(xPathExpression) || namespaces == null || !namespaces.Any())
+            {
+                return messageContent;
+            }
+
+            var expr = System.Xml.XPath.XPathExpression.Compile(xPathExpression);
+            var navigator = messageContent.OwnerDocument.CreateNavigator();
+            foreach (var ns in namespaces)
+            {
+                var nsManager = new XmlNamespaceManager(navigator.NameTable);
+                nsManager.AddNamespace(ns.Prefix, ns.Name);
+            }
+            switch (expr.ReturnType)
+            {
+                // If the expression evaluates to a boolean, return full message content if the boolean evaluted to true, otherwise return null
+                case XPathResultType.Boolean:
+                    return (bool)navigator.Evaluate(expr) ? messageContent : null;
+                // If the expression evaluates to a number, return full message content if the number is greater than 0, otherwise return null
+                // I am imagining a scenario where you are counting the number of child elements to filter as this scenario
+                case XPathResultType.Number:
+                    return (int)navigator.Evaluate(expr) > 0 ? messageContent : null;
+                // If the expression evaluates to a string, return full message content if the string is not empty, otherwise return null
+                case XPathResultType.String:
+                    return string.IsNullOrWhiteSpace(navigator.Evaluate(expr).ToString()) ? null : messageContent;
+
+                // If the expression evaluates to a node set, return full message content if the node set count is greater than 0, otherwise return null
+                case XPathResultType.NodeSet:
+                    var nodes = navigator.Select(expr);
+                    return nodes.Count > 0 ? messageContent : null;
+                default:
+                    return null;
+            }
+        }
+
+        private ISBM.Data.Models.MessagesSession GetNextMessageSession(Guid sessionId)
+        {
+            return appDbContext.Set<MessagesSession>().Include(m => m.Message)
+               .OrderBy(m => m.Message.CreatedOn) // with the lowest created on date
+               .FirstOrDefault(m =>
+                   m.SessionId == sessionId // for the session
+                   && !m.Message.ExpiredByCreatorOn.HasValue // that is not expired by the publisher 
+                   && (!m.Message.ExpiresOn.HasValue || m.Message.ExpiresOn.Value >= DateTime.UtcNow)); // and has not expired by by the date that it was set on creation
+        }
+
+        #endregion
+
         public void CloseSubscriptionSession(string SessionID)
         {
             var session = this.appDbContext.Set<Session>().FirstOrDefault(m => m.Id == new Guid(SessionID));
@@ -90,87 +141,42 @@ namespace ISBM.Web.Services
             var session = CheckSession(SessionID, SessionType.Subscriber);
 
             // get the message session object
-            var messageSession = appDbContext.Set<MessagesSession>().Include(m => m.Message)
-                .OrderBy(m => m.Message.CreatedOn) // with the lowest created on date
-                .FirstOrDefault(m =>
-                    m.SessionId == session.Id // for the session
-                    && !m.Message.ExpiredByCreatorOn.HasValue // that is not expired by the publisher 
-                    && (!m.Message.ExpiresOn.HasValue || m.Message.ExpiresOn.Value >= DateTime.UtcNow)); // and has not expired by by the date that it was set on creation
+            var messageSession = GetNextMessageSession(session.Id);
+
             if (messageSession == null)
             {
                 return null;
             }
 
-            var messageContent = ParseContent(messageSession.Message.MessageBody, session.SessionNamespaces.ToList(), session.XPathExpression);
+            var content = new XmlDocument();
+            content.LoadXml(messageSession.Message.MessageBody);
+            var xmlElementContent = EvalateFilter(content.DocumentElement, session.SessionNamespaces.ToList(), session.XPathExpression);
 
             messageSession.MessageReadOn = DateTime.UtcNow; // mark the message as read
             appDbContext.SaveChanges(); // save changes now in case there is an error parsing the message body
-
-            // TODO: need to add filtering of xpath to respect content filtering
-
+            
             return new PublicationMessage
             {
-                MessageContent = messageContent,
+                MessageContent = xmlElementContent,
                 MessageID = messageSession.MessageId.ToString(),
                 Topic = messageSession.Message.MessageTopics.Select(m => m.Topic).ToArray()
             };
         }
 
-        private XmlElement ParseContent(string messageContent, IList<ISBM.Data.Models.SessionNamespace> namespaces, string xPathExpression)
-        {
-            var content = new XmlDocument();
-            content.LoadXml(messageContent);
-            var xmlElementContent = content.DocumentElement;
-            var expr = System.Xml.XPath.XPathExpression.Compile(xPathExpression);
-
-            if (string.IsNullOrWhiteSpace(xPathExpression) || namespaces == null || !namespaces.Any())
-            {
-                return xmlElementContent;
-            }
-
-            var builder = new StringBuilder();
-            foreach (var ns in namespaces)
-            {
-                var navigator = content.CreateNavigator();
-                var nsManager = new XmlNamespaceManager(navigator.NameTable);
-                nsManager.AddNamespace(ns.Prefix, ns.Name);
-                switch (expr.ReturnType)
-                {
-                    case XPathResultType.Number:
-                    case XPathResultType.Boolean:
-                    case XPathResultType.String:
-                        builder.Append(navigator.Evaluate(expr).ToString());
-                        break;
-                    case XPathResultType.NodeSet:
-                        var nodes = navigator.Select(expr);
-                        while (nodes.MoveNext())
-                        {
-                            builder.Append(nodes.Current.OuterXml);
-                        }
-                        break;
-                    default:
-                        break;
-                }
-                if (builder.Length > 0)
-                {
-                    var result = new XmlDocument();
-                    var root = result.CreateElement("root");
-                    var rootContents = result.CreateTextNode(builder.ToString());
-                    result.DocumentElement.AppendChild(root);
-                    result.DocumentElement.LastChild.AppendChild(rootContents);
-                    return result.DocumentElement;
-                }
-            }
-
-            var defaultResult = new XmlDocument();
-            var defaultRoot = defaultResult.CreateElement("root");
-            defaultResult.DocumentElement.AppendChild(defaultRoot);
-            return defaultResult.DocumentElement;
-        }
-
         public void RemovePublication(string SessionID)
         {
-            throw new NotImplementedException();
+            var session = CheckSession(SessionID, SessionType.Subscriber);
+
+            // get the message session object
+            var messageSession = GetNextMessageSession(session.Id);
+
+            if (messageSession == null) // there were no publications to remove
+            {
+                return;
+            }
+
+            appDbContext.Remove(messageSession);
+            appDbContext.SaveChanges();
         }
     }
 }
