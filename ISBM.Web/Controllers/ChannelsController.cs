@@ -55,9 +55,14 @@ namespace ISBM.Web.Controllers
 
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult Post([FromBody]ISBM.Web.Models.Channel channel)
         {
+            if (channel == null)
+            {
+                return BadRequest(new { message = "Malformed channel object in HTTP body." });
+            }
             try
             {
                 var tokens = channel.SecurityTokens == null ? new XmlElement[0] : channel.SecurityTokens.Select(m => m.Token).ToXmlElements();
@@ -129,7 +134,7 @@ namespace ISBM.Web.Controllers
             try
             {
                 var sessionId = _providerPublicationService.OpenPublicationSession(channelUri);
-                return Created(string.Empty, new Session { Id = sessionId });
+                return Created(string.Empty, new Session { Id = sessionId, Type = SessionType.PublicationProvider });
             }
             catch (ChannelFaultException e)
             {
@@ -144,19 +149,35 @@ namespace ISBM.Web.Controllers
 
         [HttpPost("{channelUri}/subscription-sessions")]
         [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public IActionResult OpenSubscriptionSession(string channelUri, Session session)
         {
+            if(session == null)
+            {
+                return BadRequest(new { message = "Malformed session object in HTTP body." });
+            }
             try
             {
+                if(session.XPathNamespaces == null)
+                {
+                    session.XPathNamespaces = new XPathNamespace[0];
+                }
+
+                if(session.XPathNamespaces.Select(m => m.Prefix).Distinct().Count() < session.XPathNamespaces.Count())
+                {
+                    return BadRequest(new { message = "Duplicate namespace prefixes provided." });
+                }
+
                 var sessionId = _consumerPublicationService
                     .OpenSubscriptionSession(channelUri,
                         session.Topics,
                         session.ListenerUrl,
                         session.XPathExpression,
                         session.XPathNamespaces.Select(m => new Namespace { NamespaceName = m.Namespace, NamespacePrefix = m.Prefix }).ToArray());
-                return Created(string.Empty, new Session { Id = sessionId });
+
+                return Created(string.Empty, new Session { Id = sessionId, Type = SessionType.PublicationConsumer });
             }
             catch (ChannelFaultException e)
             {
