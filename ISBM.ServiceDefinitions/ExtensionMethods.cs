@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
 
@@ -19,6 +20,11 @@ namespace ISBM.ServiceDefinitions
         public static XmlElement[] ToXmlElements(this IEnumerable<string> s)
         {
             return s.Select(m => m.ToXmlElement()).ToArray();
+        }
+
+        public static bool IsGuid(this string s)
+        {
+            return Guid.TryParse(s, out Guid g);
         }
     }
 }

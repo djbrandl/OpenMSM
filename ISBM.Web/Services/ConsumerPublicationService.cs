@@ -58,7 +58,7 @@ namespace ISBM.Web.Services
 
         private ISBM.Data.Models.MessagesSession GetNextMessageSession(Guid sessionId)
         {
-            return appDbContext.Set<MessagesSession>().Include(m => m.Message)
+            return appDbContext.Set<MessagesSession>().Include(m => m.Message).ThenInclude(m => m.MessageTopics)
                .OrderBy(m => m.Message.CreatedOn) // with the lowest created on date
                .FirstOrDefault(m =>
                    m.SessionId == sessionId // for the session
@@ -154,12 +154,12 @@ namespace ISBM.Web.Services
 
             messageSession.MessageReadOn = DateTime.UtcNow; // mark the message as read
             appDbContext.SaveChanges(); // save changes now in case there is an error parsing the message body
-            
+            var intersectingTopics = session.SessionTopics.Select(m => m.Topic).Intersect(messageSession.Message.MessageTopics.Select(m => m.Topic));
             return new PublicationMessage
             {
                 MessageContent = xmlElementContent,
                 MessageID = messageSession.MessageId.ToString(),
-                Topic = messageSession.Message.MessageTopics.Select(m => m.Topic).ToArray()
+                Topic = intersectingTopics.ToArray()
             };
         }
 

@@ -45,7 +45,7 @@ namespace ISBM.Web.Services
 
         protected ISBM.Data.Models.Session GetSessionById(Guid sessionId)
         {
-            return this.appDbContext.Set<ISBM.Data.Models.Session>().Include(m => m.SessionNamespaces).Include(m => m.Channel)
+            return this.appDbContext.Set<ISBM.Data.Models.Session>().Include(m => m.SessionNamespaces).Include(m => m.SessionTopics).Include(m => m.Channel)
                 .ThenInclude(m => m.ChannelsSecurityTokens).ThenInclude(cst => cst.SecurityToken).FirstOrDefault(m => m.Id == sessionId);
         }
 

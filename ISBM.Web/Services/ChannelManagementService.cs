@@ -151,7 +151,7 @@ namespace ISBM.Web.Services
             {
                 throw new SecurityTokenFaultException("One or more of the provided security tokens are not assigned to the channel.");
             }
-            foreach (var tokenLink in channel.ChannelsSecurityTokens.Where(m => inputTokens.Contains(m.SecurityToken.Token)))
+            foreach (var tokenLink in channel.ChannelsSecurityTokens.Where(m => inputTokens.Contains(m.SecurityToken.Token)).ToList())
             {
                 channel.ChannelsSecurityTokens.Remove(tokenLink);
             }
