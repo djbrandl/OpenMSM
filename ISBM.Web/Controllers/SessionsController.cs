@@ -33,8 +33,7 @@ namespace ISBM.Web.Controllers
 
         #endregion
 
-
-        // TODO: Doing this differently where the entire message topic + expiry is in the POST body, not in the URL... Why are these split?
+        // TODO: Doing this differently where the entire message topic + expiry is in the POST body, not in the URL... Why are these split and seemingly arbitrarily?
         [HttpPost("{sessionId}/publications")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
