@@ -38,10 +38,15 @@ namespace ISBM.Web.Controllers
         [HttpPost("{sessionId}/publications")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public IActionResult PostPublication(string sessionId, [FromBody]Message message)
         {
+            if (!sessionId.IsGuid())
+            {
+                return BadRequest(new { message = "Invalid session ID format." });
+            }
             if (message == null)
             {
                 return BadRequest(new { message = "Malformed message object in HTTP body." });
@@ -51,7 +56,7 @@ namespace ISBM.Web.Controllers
                 var doc = new XmlDocument();
                 doc.LoadXml(message.Content);
                 var messageId = _providerPublicationService.PostPublication(sessionId, doc.DocumentElement, message.Topics, message.Duration);
-                return Created(new Uri(Url.Link("ExpirePublication", new { sessionId, messageId })), new Message { Id = messageId });
+                return Created(new Uri(Url.Link("ExpirePublication", new { sessionId, messageId })), new Message { Id = messageId, Type = MessageType.Publication });
             }
             catch (XmlException)
             {
@@ -59,20 +64,37 @@ namespace ISBM.Web.Controllers
             }
             catch (SessionFaultException e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 if (e.Message.IndexOf("is not of the correct type") >= 0)
                 {
                     return UnprocessableEntity(new { message = e.Message });
                 }
                 return NotFound(new { message = e.Message });
             }
+            catch (Exception e)
+            {
+                return NotFound(e.Message);
+            }
         }
 
         [HttpPost("{sessionId}/publications/{messageId}", Name = "ExpirePublication")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public IActionResult ExpirePublication(string sessionId, string messageId)
         {
+            if (!sessionId.IsGuid())
+            {
+                return BadRequest(new { message = "Invalid session ID format." });
+            }
+            if (!messageId.IsGuid())
+            {
+                return BadRequest(new { message = "Invalid message ID format." });
+            }
             try
             {
                 _providerPublicationService.ExpirePublication(sessionId, messageId);
@@ -80,6 +102,10 @@ namespace ISBM.Web.Controllers
             }
             catch (SessionFaultException e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 if (e.Message.IndexOf("is not of the correct type") >= 0)
                 {
                     return UnprocessableEntity(new { message = e.Message });
@@ -88,11 +114,20 @@ namespace ISBM.Web.Controllers
             }
         }
 
-        [HttpDelete("{sessionId}")]
+        [HttpDelete("{sessionId}", Name = "ClosePublicationSession")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult ClosePublicationSession(string sessionId, string messageId)
         {
+            if (!sessionId.IsGuid())
+            {
+                return BadRequest(new { message = "Invalid session ID format." });
+            }
+            if (!messageId.IsGuid())
+            {
+                return BadRequest(new { message = "Invalid message ID format." });
+            }
             try
             {
                 var session = this.dbContext.Set<ISBM.Data.Models.Session>().FirstOrDefault(m => m.Id == new Guid(sessionId));
@@ -112,18 +147,27 @@ namespace ISBM.Web.Controllers
                 }
                 return NotFound();
             }
-            catch (SessionFaultException e)
+            catch (Exception e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 return NotFound(new { message = e.Message });
             }
         }
 
         [HttpGet("{sessionId}/publication")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public IActionResult ReadPublication(string sessionId)
         {
+            if (!sessionId.IsGuid())
+            {
+                return BadRequest(new { message = "Invalid session ID format." });
+            }
             try
             {
                 var message = _consumerPublicationService.ReadPublication(sessionId);
@@ -137,13 +181,17 @@ namespace ISBM.Web.Controllers
                         Type = MessageType.Publication
                     };
                     this.Response.Headers.Add("ISBM-MessageID", retval.Id);
-                    this.Response.Headers.Add("ISBM-Topic", retval.Topics.Aggregate((last, next) => last + ", " + next));
+                    this.Response.Headers.Add("ISBM-Topic", retval.Topics.Any() ? retval.Topics.Aggregate((last, next) => last + ", " + next) : "");
                     return Ok(retval);
                 }
                 return Ok();
             }
             catch (SessionFaultException e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 if (e.Message.IndexOf("is not of the correct type") >= 0)
                 {
                     return UnprocessableEntity(new { message = e.Message });
@@ -155,10 +203,15 @@ namespace ISBM.Web.Controllers
 
         [HttpDelete("{sessionId}/publication")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public IActionResult RemovePublication(string sessionId)
         {
+            if (!sessionId.IsGuid())
+            {
+                return BadRequest(new { message = "Invalid session ID format." });
+            }
             try
             {
                 _consumerPublicationService.RemovePublication(sessionId);
@@ -166,6 +219,10 @@ namespace ISBM.Web.Controllers
             }
             catch (SessionFaultException e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 if (e.Message.IndexOf("is not of the correct type") >= 0)
                 {
                     return UnprocessableEntity(new { message = e.Message });

@@ -39,6 +39,7 @@ namespace ISBM.Web.Controllers
 
         [HttpGet("{channelUri}")]
         [ProducesResponseType(typeof(ISBM.Web.Models.Channel), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult Get(string channelUri)
         {
@@ -49,6 +50,10 @@ namespace ISBM.Web.Controllers
             }
             catch (ChannelFaultException e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 return NotFound(new { message = e.Message });
             }
         }
@@ -59,6 +64,7 @@ namespace ISBM.Web.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult Post([FromBody]ISBM.Web.Models.Channel channel)
         {
@@ -77,12 +83,17 @@ namespace ISBM.Web.Controllers
             }
             catch (ChannelFaultException e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 return NotFound(new { message = e.Message });
             }
         }
 
         [HttpDelete("{channelUri}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult Delete(string channelUri)
         {
@@ -93,12 +104,17 @@ namespace ISBM.Web.Controllers
             }
             catch (ChannelFaultException e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 return NotFound(new { message = e.Message });
             }
         }
 
         [HttpPost("{channelUri}/security-tokens", Name = "AddSecurityTokens")]
         [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult AddSecurityTokens(string channelUri, [FromBody]SecurityToken[] securityTokens)
         {
@@ -110,12 +126,17 @@ namespace ISBM.Web.Controllers
             }
             catch (ChannelFaultException e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 return NotFound(new { message = e.Message });
             }
         }
 
         [HttpDelete("{channelUri}/security-tokens")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult RemoveSecurityTokens(string channelUri, [FromBody]SecurityToken[] securityTokens)
         {
@@ -127,12 +148,17 @@ namespace ISBM.Web.Controllers
             }
             catch (ChannelFaultException e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 return NotFound(new { message = e.Message });
             }
         }
 
         [HttpPost("{channelUri}/publication-sessions")]
         [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public IActionResult OpenPublicationSession(string channelUri)
@@ -144,6 +170,10 @@ namespace ISBM.Web.Controllers
             }
             catch (ChannelFaultException e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 return NotFound(new { message = e.Message });
             }
             catch (OperationFaultException e)
@@ -156,9 +186,10 @@ namespace ISBM.Web.Controllers
         [HttpPost("{channelUri}/subscription-sessions")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-        public IActionResult OpenSubscriptionSession(string channelUri, Session session)
+        public IActionResult OpenSubscriptionSession(string channelUri, [FromBody]Session session)
         {
             if (session == null)
             {
@@ -183,10 +214,19 @@ namespace ISBM.Web.Controllers
                         session.XPathExpression,
                         session.XPathNamespaces.Select(m => new Namespace { NamespaceName = m.Namespace, NamespacePrefix = m.Prefix }).ToArray());
 
-                return Created(string.Empty, new Session { Id = sessionId, Type = SessionType.PublicationConsumer });
+                session.Id = sessionId;
+                session.Type = SessionType.PublicationConsumer;
+
+                // Sending the link to the route for "ClosePublicationSession", but that requires a DELETE action to be taken.
+                // This is set for semantic purposes for the "Location" header that is returned.
+                return Created(new Uri(Url.Link("ClosePublicationSession", new { sessionId })), session);
             }
             catch (ChannelFaultException e)
             {
+                if (e.Message.IndexOf("Provided header security token") >= 0)
+                {
+                    return Unauthorized(new { message = e.Message });
+                }
                 return NotFound(new { message = e.Message });
             }
             catch (OperationFaultException e)
