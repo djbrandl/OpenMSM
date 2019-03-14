@@ -53,6 +53,9 @@ namespace ISBM.Web.Controllers
             }
         }
 
+        // TODO: Doing the return slightly differently - not returning the full channel object as that 
+        // functionality doesn't match what the ISBM specifications would return and it is overly verbose
+        // returning the same object that was passed in.
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -66,7 +69,10 @@ namespace ISBM.Web.Controllers
             try
             {
                 var tokens = channel.SecurityTokens == null ? new XmlElement[0] : channel.SecurityTokens.Select(m => m.Token).ToXmlElements();
-                _channelManagementService.CreateChannel(channel.Uri, channel.Type, channel.Description, tokens);
+                _channelManagementService.CreateChannel(channel.Uri,
+                    channel.Type == Models.ChannelType.Publication ? ServiceDefinitions.ChannelType.Publication : ServiceDefinitions.ChannelType.Request,
+                    channel.Description,
+                    tokens);
                 return Created(string.Empty, null);
             }
             catch (ChannelFaultException e)
@@ -154,18 +160,18 @@ namespace ISBM.Web.Controllers
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public IActionResult OpenSubscriptionSession(string channelUri, Session session)
         {
-            if(session == null)
+            if (session == null)
             {
                 return BadRequest(new { message = "Malformed session object in HTTP body." });
             }
             try
             {
-                if(session.XPathNamespaces == null)
+                if (session.XPathNamespaces == null)
                 {
                     session.XPathNamespaces = new XPathNamespace[0];
                 }
 
-                if(session.XPathNamespaces.Select(m => m.Prefix).Distinct().Count() < session.XPathNamespaces.Count())
+                if (session.XPathNamespaces.Select(m => m.Prefix).Distinct().Count() < session.XPathNamespaces.Count())
                 {
                     return BadRequest(new { message = "Duplicate namespace prefixes provided." });
                 }

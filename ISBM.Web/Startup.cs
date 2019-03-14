@@ -28,9 +28,16 @@ namespace ISBM.Web
             services.AddDbContext<ISBM.Data.AppDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
             //services.AddScoped<ISBM.Data.AppDbContext>();
 
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            services.AddMvc()
+                .AddJsonOptions(options =>
+                {
+                    options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
+                    options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+                })
+                .SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
-            var mapperConfig = new MapperConfiguration(m => {
+            var mapperConfig = new MapperConfiguration(m =>
+            {
                 m.AddProfile(new MappingProfile());
             });
 
@@ -64,7 +71,7 @@ namespace ISBM.Web
             app.UseSpaStaticFiles();
 
             app.UseMvc();
-            
+
             app.UseSpa(spa =>
             {
                 spa.Options.SourcePath = "ClientApp";

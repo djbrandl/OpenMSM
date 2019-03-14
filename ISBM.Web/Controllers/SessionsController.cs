@@ -33,7 +33,8 @@ namespace ISBM.Web.Controllers
 
         #endregion
 
-        // TODO: Doing this differently where the entire message topic + expiry is in the POST body, not in the URL... Why are these split and seemingly arbitrarily?
+        // TODO: Doing this differently where the entire message topic + expiry is in the POST body, not in the URL
+        // Why are the message topics and duration split in the documentation between the URL and the body?
         [HttpPost("{sessionId}/publications")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
