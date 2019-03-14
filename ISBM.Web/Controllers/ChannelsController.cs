@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Xml;
 using AutoMapper;
 using ISBM.Data;
@@ -18,30 +17,24 @@ namespace ISBM.Web.Controllers
     public class ChannelsController : ControllerBase
     {
         private XmlElement _accessToken { get; set; }
-        private ChannelManagementService _service { get; set; }
+        private ChannelManagementService _channelManagementService { get; set; }
+        private ProviderPublicationService _providerPublicationService { get; set; }
+        private ConsumerPublicationService _consumerPublicationService { get; set; }
 
         public ChannelsController(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper)
         {
-            _service = new ChannelManagementService(dbContext, mapper);
-        }
-
-        public override void OnActionExecuting(ActionExecutingContext context)
-        {
-            var authHeader = context.HttpContext.Request.Headers.FirstOrDefault(m => m.Key == "Authorization");
-
-            // checking null on the key as the KeyValuePair<T,T> is a struct and initialized with default <null, 0>
-            if (!string.IsNullOrWhiteSpace(authHeader.Key))
-            {
-                _service.SetAccessToken(authHeader.Value.ToString().ToXmlElement().OuterXml);
-            }
-
-            base.OnActionExecuting(context);
+            _channelManagementService = new ChannelManagementService(dbContext, mapper);
+            _providerPublicationService = new ProviderPublicationService(dbContext, mapper);
+            _consumerPublicationService = new ConsumerPublicationService(dbContext, mapper);
+            this.servicesList.Add(_channelManagementService);
+            this.servicesList.Add(_providerPublicationService);
+            this.servicesList.Add(_consumerPublicationService);
         }
 
         [HttpGet]
         public IEnumerable<ISBM.Web.Models.Channel> Get()
         {
-            return _service.GetChannels().Select(m => mapper.Map<ISBM.Web.Models.Channel>(m));
+            return _channelManagementService.GetChannels().Select(m => mapper.Map<ISBM.Web.Models.Channel>(m));
         }
 
         [HttpGet("{channelUri}")]
@@ -51,7 +44,7 @@ namespace ISBM.Web.Controllers
         {
             try
             {
-                var channel = _service.GetChannel(System.Net.WebUtility.UrlDecode(channelUri));
+                var channel = _channelManagementService.GetChannel(System.Net.WebUtility.UrlDecode(channelUri));
                 return Ok(mapper.Map<ISBM.Web.Models.Channel>(channel));
             }
             catch (ChannelFaultException e)
@@ -68,7 +61,7 @@ namespace ISBM.Web.Controllers
             try
             {
                 var tokens = channel.SecurityTokens == null ? new XmlElement[0] : channel.SecurityTokens.Select(m => m.Token).ToXmlElements();
-                _service.CreateChannel(channel.Uri, channel.Type, channel.Description, tokens);
+                _channelManagementService.CreateChannel(channel.Uri, channel.Type, channel.Description, tokens);
                 return Created(string.Empty, null);
             }
             catch (ChannelFaultException e)
@@ -84,7 +77,7 @@ namespace ISBM.Web.Controllers
         {
             try
             {
-                _service.DeleteChannel(System.Net.WebUtility.UrlDecode(channelUri));
+                _channelManagementService.DeleteChannel(System.Net.WebUtility.UrlDecode(channelUri));
                 return NoContent();
             }
             catch (ChannelFaultException e)
@@ -93,8 +86,7 @@ namespace ISBM.Web.Controllers
             }
         }
 
-        [HttpPost("{channelUri}/security-tokens")]
-
+        [HttpPost("{channelUri}/security-tokens", Name = "AddSecurityTokens")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult AddSecurityTokens(string channelUri, [FromBody]SecurityToken[] securityTokens)
@@ -102,8 +94,8 @@ namespace ISBM.Web.Controllers
             try
             {
                 var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
-                _service.AddSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri), tokens);
-                return Created(string.Empty, null);
+                _channelManagementService.AddSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri), tokens);
+                return Created(new Uri(Url.Link("AddSecurityTokens", new { channelUri })), null);
             }
             catch (ChannelFaultException e)
             {
@@ -119,12 +111,60 @@ namespace ISBM.Web.Controllers
             try
             {
                 var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
-                _service.RemoveSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri), tokens);
+                _channelManagementService.RemoveSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri), tokens);
                 return NoContent();
             }
             catch (ChannelFaultException e)
             {
                 return NotFound(new { message = e.Message });
+            }
+        }
+
+        [HttpPost("{channelUri}/publication-sessions")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+        public IActionResult OpenPublicationSession(string channelUri)
+        {
+            try
+            {
+                var sessionId = _providerPublicationService.OpenPublicationSession(channelUri);
+                return Created(string.Empty, new Session { Id = sessionId });
+            }
+            catch (ChannelFaultException e)
+            {
+                return NotFound(new { message = e.Message });
+            }
+            catch (OperationFaultException e)
+            {
+                return UnprocessableEntity(new { message = e.Message });
+            }
+        }
+
+
+        [HttpPost("{channelUri}/subscription-sessions")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+        public IActionResult OpenSubscriptionSession(string channelUri, Session session)
+        {
+            try
+            {
+                var sessionId = _consumerPublicationService
+                    .OpenSubscriptionSession(channelUri,
+                        session.Topics,
+                        session.ListenerUrl,
+                        session.XPathExpression,
+                        session.XPathNamespaces.Select(m => new Namespace { NamespaceName = m.Namespace, NamespacePrefix = m.Prefix }).ToArray());
+                return Created(string.Empty, new Session { Id = sessionId });
+            }
+            catch (ChannelFaultException e)
+            {
+                return NotFound(new { message = e.Message });
+            }
+            catch (OperationFaultException e)
+            {
+                return UnprocessableEntity(new { message = e.Message });
             }
         }
     }
