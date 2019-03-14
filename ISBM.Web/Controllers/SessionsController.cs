@@ -37,10 +37,15 @@ namespace ISBM.Web.Controllers
         // TODO: Doing this differently where the entire message topic + expiry is in the POST body, not in the URL... Why are these split?
         [HttpPost("{sessionId}/publications")]
         [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public IActionResult PostPublication(string sessionId, [FromBody]Message message)
         {
+            if (message == null)
+            {
+                return BadRequest(new { message = "Malformed message object in HTTP body." });
+            }
             try
             {
                 var doc = new XmlDocument();
@@ -83,7 +88,6 @@ namespace ISBM.Web.Controllers
             }
         }
 
-        // TODO: This is the same route as the one which handles consumer publication sessions as well... Need to determine best way of handling that
         [HttpDelete("{sessionId}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -110,6 +114,62 @@ namespace ISBM.Web.Controllers
             }
             catch (SessionFaultException e)
             {
+                return NotFound(new { message = e.Message });
+            }
+        }
+
+        [HttpGet("{sessionId}/publication")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+        public IActionResult ReadPublication(string sessionId)
+        {
+            try
+            {
+                var message = _consumerPublicationService.ReadPublication(sessionId);
+                if (message != null)
+                {
+                    var retval = new ISBM.Web.Models.Message
+                    {
+                        Id = message.MessageID,
+                        Content = message.MessageContent.OuterXml,
+                        Topics = message.Topic,
+                        Type = MessageType.Publication
+                    };
+                    this.Response.Headers.Add("ISBM-MessageID", retval.Id);
+                    this.Response.Headers.Add("ISBM-Topic", retval.Topics.Aggregate((last, next) => last + ", " + next));
+                    return Ok(retval);
+                }
+                return Ok();
+            }
+            catch (SessionFaultException e)
+            {
+                if (e.Message.IndexOf("is not of the correct type") >= 0)
+                {
+                    return UnprocessableEntity(new { message = e.Message });
+                }
+                return NotFound(new { message = e.Message });
+            }
+        }
+
+
+        [HttpDelete("{sessionId}/publication")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+        public IActionResult RemovePublication(string sessionId)
+        {
+            try
+            {
+                _consumerPublicationService.RemovePublication(sessionId);
+                return NoContent();
+            }
+            catch (SessionFaultException e)
+            {
+                if (e.Message.IndexOf("is not of the correct type") >= 0)
+                {
+                    return UnprocessableEntity(new { message = e.Message });
+                }
                 return NotFound(new { message = e.Message });
             }
         }
