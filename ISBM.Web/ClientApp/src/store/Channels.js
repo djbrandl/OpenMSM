@@ -1,27 +1,69 @@
-﻿export const REQUEST_CHANNELS = 'REQUEST_CHANNELS'
+﻿//import { reset } from 'redux-form';
+
+export const REQUEST_CHANNELS = 'REQUEST_CHANNELS'
 export const RECEIVE_CHANNELS = 'RECEIVE_CHANNELS'
 export const SET_ACCESS_TOKEN = 'SET_ACCESS_TOKEN'
 export const CREATE_CHANNELS_REQUEST = 'CREATE_CHANNELS_REQUEST'
 export const CREATE_CHANNELS_RECEIVE = 'CREATE_CHANNELS_RECEIVE'
 export const CHANGE_TAB = 'CHANGE_TAB'
+export const TOGGLE_API = 'TOGGLE_API'
+export const SET_LAST_API = 'SET_LAST_API'
 
-const initialState = { channels: [], isLoading: false, accessToken: '', activeTab: 'Get' };
+const initialState = {
+    channels: [], isLoading: false, accessToken: '', activeTab: 'Get', showApi: false, lastApiCallUrl: '', lastApiCallDetails: {}, lastApiResponse: {}
+};
+
+const buildResponse = (response) => {
+    return {
+        headers: response.headers,
+        ok: response.ok,
+        redirected: response.redirected,
+        status: response.status,
+        statusText: response.statusText,
+        type: response.type,
+        url: response.url
+    };
+};
+
 const channelApiFunctions = {
-    getChannels: async (accessToken) => {
+    getChannels: async (accessToken, dispatch) => {
         const url = 'api/Channels/';
-        const response = await fetch(url, {
+        const options = {
             method: 'GET',
             headers: {
                 "Authorization": accessToken,
                 "Content-Type": "application/json"
             }
-        });
-        const channels = await response.json();
-        return channels;
+        };
+        try {
+            const response = await fetch(url, options);
+            const channels = await response.json();
+            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+            return channels;
+        }
+        catch (e) {
+
+        }
+    },
+    createChannel: async (object, dispatch) => {
+        const url = 'api/Channels/';
+        const options = {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(object)
+        };
+        const response = await fetch(url, options);
+        dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+        return response;
     }
 };
 
 export const actionCreators = {
+    toggleApi: () => async (dispatch) => {
+        dispatch({ type: TOGGLE_API });
+    },
     setAccessToken: (event) => async (dispatch, getState) => {
         event.preventDefault();
         const data = new FormData(event.target);
@@ -29,11 +71,10 @@ export const actionCreators = {
         data.forEach(function (value, key) {
             object[key] = value;
         });
-        console.log(object['token']);
         dispatch({ type: SET_ACCESS_TOKEN, accessToken: object['token'] });
 
         dispatch({ type: REQUEST_CHANNELS });
-        const channels = await channelApiFunctions.getChannels(object['token']);
+        const channels = await channelApiFunctions.getChannels(object['token'], dispatch);
         dispatch({ type: RECEIVE_CHANNELS, channels });
     },
     setActiveTab: (tab) => async (dispatch, getState) => {
@@ -56,24 +97,15 @@ export const actionCreators = {
             }
         });
 
-        const accessToken = getState().channels.accessToken;
-        const url = 'api/Channels/';
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                "Authorization": accessToken,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(object)
-        });
-        await response;
+        await channelApiFunctions.createChannel(object, dispatch);
         dispatch({ type: CREATE_CHANNELS_RECEIVE });
+        //dispatch(reset('createChannel'));
     },
     requestChannels: () => async (dispatch, getState) => {
         dispatch({ type: REQUEST_CHANNELS });
 
         const accessToken = getState().channels.accessToken;
-        const channels = await channelApiFunctions.getChannels(accessToken);
+        const channels = await channelApiFunctions.getChannels(accessToken, dispatch);
 
         dispatch({ type: RECEIVE_CHANNELS, channels });
     }
@@ -125,6 +157,23 @@ export const reducer = (state, action) => {
         return {
             ...state,
             activeTab: action.tab
+        };
+    }
+
+    if (action.type === TOGGLE_API) {
+        return {
+            ...state,
+            showApi: !state.showApi
+        };
+    }
+
+    if (action.type === SET_LAST_API) {
+        console.log(action.lastApiResponse);
+        return {
+            ...state,
+            lastApiCallUrl: action.lastApiCallUrl,
+            lastApiCallDetails: action.lastApiCallDetails,
+            lastApiResponse: action.lastApiResponse,
         };
     }
     return state;
