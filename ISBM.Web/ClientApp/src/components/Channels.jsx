@@ -1,8 +1,7 @@
 ﻿import React, { Component } from 'react';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
-import { Link } from 'react-router-dom';
-import { actionCreators } from '../store/WeatherForecasts';
+import { actionCreators } from '../store/Channels';
 
 
 class FetchData extends Component {
@@ -20,33 +19,32 @@ class FetchData extends Component {
     render() {
         return (
             <div>
-                <h1>Weather forecast</h1>
-                <p>This component demonstrates fetching data from the server and working with URL parameters.</p>
-                {renderForecastsTable(this.props)}
-                {renderPagination(this.props)}
+                <h1>Channels</h1>
+                <hr/>
+                <p>This component demonstrates fetching channels from the REST API.</p>
+                {renderChannels(this.props)}
             </div>
         );
     }
 }
 
-function renderForecastsTable(props) {
+function renderChannels(props) {
     return (
         <table className='table table-striped'>
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Temp. (C)</th>
-                    <th>Temp. (F)</th>
-                    <th>Summary</th>
+                    <th>URI</th>
+                    <th>Type</th>
+                    <th>Topics</th>
                 </tr>
             </thead>
             <tbody>
-                {props.forecasts.map(forecast =>
-                    <tr key={forecast.dateFormatted}>
-                        <td>{forecast.dateFormatted}</td>
-                        <td>{forecast.temperatureC}</td>
-                        <td>{forecast.temperatureF}</td>
-                        <td>{forecast.summary}</td>
+                {props.channels.map(channel =>
+                    <tr key={channel.ChannelUri}>
+                        <td>{channel.uri}</td>
+                        <td>{channel.type}</td>
+                        <td>{channel.tokens}</td>
+                            
                     </tr>
                 )}
             </tbody>
@@ -54,18 +52,7 @@ function renderForecastsTable(props) {
     );
 }
 
-function renderPagination(props) {
-    const prevStartDateIndex = (props.startDateIndex || 0) - 5;
-    const nextStartDateIndex = (props.startDateIndex || 0) + 5;
-
-    return <p className='clearfix text-center'>
-        <Link className='btn btn-default pull-left' to={`/fetch-data/${prevStartDateIndex}`}>Previous</Link>
-        <Link className='btn btn-default pull-right' to={`/fetch-data/${nextStartDateIndex}`}>Next</Link>
-        {props.isLoading ? <span>Loading...</span> : []}
-    </p>;
-}
-
 export default connect(
-    state => state.weatherForecasts,
+    state => state.channels,
     dispatch => bindActionCreators(actionCreators, dispatch)
 )(FetchData);

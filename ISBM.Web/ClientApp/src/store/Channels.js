@@ -5,7 +5,7 @@ const initialState = { channels: [], isLoading: false };
 
 
 export const actionCreators = {
-    requestChannels: async (dispatch, getState) => {
+    requestChannels: () => async (dispatch, getState) => {
         dispatch({ type: REQUEST_CHANNELS });
 
         const url = 'api/Channels/';

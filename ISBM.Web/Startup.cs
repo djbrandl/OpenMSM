@@ -37,6 +37,8 @@ namespace ISBM.Web
             services.AddScoped<ChannelManagementService>();
             services.AddScoped<ConsumerPublicationService>();
             services.AddScoped<ProviderPublicationService>();
+            services.AddScoped<ConsumerRequestService>();
+            services.AddScoped<ProviderRequestService>();
             services.AddScoped<NotificationService>();
 
             services.AddMvc().AddJsonOptions(options =>
