@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using ISBM.Data;
 using ISBM.Data.Models;
 using ISBM.ServiceDefinitions;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,7 @@ namespace ISBM.Web.Services
 {
     public class ProviderPublicationService : ServiceBase, IProviderPublicationServiceSoap
     {
-        public ProviderPublicationService(DbContext dbContext, IMapper mapper) : base(dbContext, mapper) { }
+        public ProviderPublicationService(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper) { }
         
         public void ClosePublicationSession(string SessionID)
         {
@@ -67,7 +68,7 @@ namespace ISBM.Web.Services
             var session = new Session
             {
                 ChannelId = channel.Id,
-                Type = (int)SessionType.Publisher
+                Type = SessionType.Publisher
             };
             this.appDbContext.Set<Session>().Add(session);
             this.appDbContext.SaveChanges();

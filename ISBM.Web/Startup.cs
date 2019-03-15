@@ -1,5 +1,6 @@
 using AutoMapper;
 using ISBM.Web.Mapping;
+using ISBM.Web.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -26,15 +27,23 @@ namespace ISBM.Web
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<ISBM.Data.AppDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
-            //services.AddScoped<ISBM.Data.AppDbContext>();
 
-            services.AddMvc()
-                .AddJsonOptions(options =>
-                {
-                    options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
-                    options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-                })
-                .SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            services.AddHttpClient("DefaultHttpClient", client =>
+            {
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                client.DefaultRequestHeaders.Add("User-Agent", "ISBM Service Provider");
+            });
+
+            services.AddScoped<ChannelManagementService>();
+            services.AddScoped<ConsumerPublicationService>();
+            services.AddScoped<ProviderPublicationService>();
+            services.AddScoped<NotificationService>();
+
+            services.AddMvc().AddJsonOptions(options =>
+            {
+                options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
+                options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+            }).SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
             var mapperConfig = new MapperConfiguration(m =>
             {

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using ISBM.Data;
 using ISBM.ServiceDefinitions;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -12,7 +13,7 @@ namespace ISBM.Web.Services
 {
     public class ChannelManagementService : ServiceBase, IChannelManagementServiceSoap
     {
-        public ChannelManagementService(DbContext dbContext, IMapper mapper) : base(dbContext, mapper) { }
+        public ChannelManagementService(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper) { }
 
         #region Private Methods
         private void AssociateTokensToChannel(ISBM.Data.Models.Channel channel, IEnumerable<string> securityTokens)

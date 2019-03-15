@@ -13,15 +13,13 @@ namespace ISBM.Web.Controllers
 {
     public class ControllerBase : Controller
     {
-        protected DbContext dbContext { get; private set; }
-        protected IMapper mapper { get; private set; }
-        protected IList<ServiceBase> servicesList { get; set; }
+        protected IMapper Mapper { get; private set; }
+        protected IList<ServiceBase> ServicesList { get; set; }
 
-        public ControllerBase(DbContext dbContext, IMapper mapper)
+        public ControllerBase(IMapper mapper)
         {
-            this.dbContext = dbContext;
-            this.mapper = mapper;
-            this.servicesList = new List<ServiceBase>();
+            this.Mapper = mapper;
+            this.ServicesList = new List<ServiceBase>();
         }
 
         public override void OnActionExecuting(ActionExecutingContext context)
@@ -31,7 +29,7 @@ namespace ISBM.Web.Controllers
             // checking null on the key as the KeyValuePair<T,T> is a struct and initialized with default <null, 0>
             if (!string.IsNullOrWhiteSpace(authHeader.Key))
             {
-                foreach (var service in servicesList)
+                foreach (var service in ServicesList)
                 {
                     service.SetAccessToken(authHeader.Value.ToString().ToXmlElement().OuterXml);
                 }

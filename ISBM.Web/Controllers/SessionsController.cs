@@ -10,7 +10,7 @@ using ISBM.Web.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-
+using Microsoft.EntityFrameworkCore;
 
 namespace ISBM.Web.Controllers
 {
@@ -20,22 +20,34 @@ namespace ISBM.Web.Controllers
     {
         private ProviderPublicationService _providerPublicationService { get; set; }
         private ConsumerPublicationService _consumerPublicationService { get; set; }
+        private NotificationService _notificationService { get; set; }
+        private AppDbContext _dbContext { get; set; }
 
-        public SessionsController(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper)
+        //public SessionsController(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper)
+        //{
+        //    _providerPublicationService = new ProviderPublicationService(dbContext, mapper);
+        //    _consumerPublicationService = new ConsumerPublicationService(dbContext, mapper);
+        //    this.servicesList.Add(_providerPublicationService);
+        //    this.servicesList.Add(_consumerPublicationService);
+        //}
+
+        public SessionsController(ProviderPublicationService providerPublicationService, ConsumerPublicationService consumerPublicationService, NotificationService notificationService, AppDbContext dbContext, IMapper mapper) : base(mapper)
         {
-            _providerPublicationService = new ProviderPublicationService(dbContext, mapper);
-            _consumerPublicationService = new ConsumerPublicationService(dbContext, mapper);
-            this.servicesList.Add(_providerPublicationService);
-            this.servicesList.Add(_consumerPublicationService);
+            this._dbContext = dbContext;
+            this._providerPublicationService = providerPublicationService;
+            this._consumerPublicationService = consumerPublicationService;
+            this._notificationService = notificationService;
+            this.ServicesList.Add(_providerPublicationService);
+            this.ServicesList.Add(_consumerPublicationService);
         }
 
-        #region Private Methods
+    #region Private Methods
 
-        #endregion
+    #endregion
 
-        // TODO: Doing this differently where the entire message topic + expiry is in the POST body, not in the URL
-        // Why are the message topics and duration split in the documentation between the URL and the body?
-        [HttpPost("{sessionId}/publications")]
+    // TODO: Doing this differently where the entire message topic + expiry is in the POST body, not in the URL
+    // Why are the message topics and duration split in the documentation between the URL and the body?
+    [HttpPost("{sessionId}/publications")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -56,6 +68,10 @@ namespace ISBM.Web.Controllers
                 var doc = new XmlDocument();
                 doc.LoadXml(message.Content);
                 var messageId = _providerPublicationService.PostPublication(sessionId, doc.DocumentElement, message.Topics, message.Duration);
+
+                // fire and forget the call to notify all listeners
+                _notificationService.NotifyAllListeners(new Guid(sessionId), new Guid(messageId));
+
                 return Created(new Uri(Url.Link("ExpirePublication", new { sessionId, messageId })), new Message { Id = messageId, Type = MessageType.Publication });
             }
             catch (XmlException)
@@ -130,7 +146,7 @@ namespace ISBM.Web.Controllers
             }
             try
             {
-                var session = this.dbContext.Set<ISBM.Data.Models.Session>().FirstOrDefault(m => m.Id == new Guid(sessionId));
+                var session = this._dbContext.Set<ISBM.Data.Models.Session>().FirstOrDefault(m => m.Id == new Guid(sessionId));
                 if (session == null)
                 {
                     return NotFound(new { message = "A session with the specified ID does not exist." });
