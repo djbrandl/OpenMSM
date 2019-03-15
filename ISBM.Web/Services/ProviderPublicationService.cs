@@ -36,7 +36,7 @@ namespace ISBM.Web.Services
         public void ExpirePublication(string SessionID, string MessageID)
         {
             var session = CheckSession(SessionID, SessionType.Publisher);
-            var message = this.appDbContext.Set<Message>().FirstOrDefault(m => m.CreatedBySessionId == session.Id);
+            var message = this.appDbContext.Set<Message>().FirstOrDefault(m => m.CreatedBySessionId == session.Id && m.Id == new Guid(MessageID));
             if (message == null)
             {
                 return;

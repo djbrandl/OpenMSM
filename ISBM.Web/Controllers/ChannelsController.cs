@@ -20,26 +20,54 @@ namespace ISBM.Web.Controllers
         private ChannelManagementService _channelManagementService { get; set; }
         private ProviderPublicationService _providerPublicationService { get; set; }
         private ConsumerPublicationService _consumerPublicationService { get; set; }
+        private ProviderRequestService _providerRequestService { get; set; }
+        private ConsumerRequestService _consumerRequestService { get; set; }
 
-        //public ChannelsController(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper)
-        //{
-        //    _channelManagementService = new ChannelManagementService(dbContext, mapper);
-        //    _providerPublicationService = new ProviderPublicationService(dbContext, mapper);
-        //    _consumerPublicationService = new ConsumerPublicationService(dbContext, mapper);
-        //    this.servicesList.Add(_channelManagementService);
-        //    this.servicesList.Add(_providerPublicationService);
-        //    this.servicesList.Add(_consumerPublicationService);
-        //}
-
-        public ChannelsController(ChannelManagementService channelManagementService, ProviderPublicationService providerPublicationService, ConsumerPublicationService consumerPublicationService, IMapper mapper) : base(mapper)
+        public ChannelsController(ChannelManagementService channelManagementService, ProviderPublicationService providerPublicationService, ConsumerPublicationService consumerPublicationService, ProviderRequestService providerRequestService, ConsumerRequestService consumerRequestService, IMapper mapper) : base(mapper)
         {
             this._channelManagementService = channelManagementService;
             this._providerPublicationService = providerPublicationService;
             this._consumerPublicationService = consumerPublicationService;
+            this._providerRequestService = providerRequestService;
+            this._consumerRequestService = consumerRequestService;
             this.ServicesList.Add(_channelManagementService);
             this.ServicesList.Add(_providerPublicationService);
             this.ServicesList.Add(_consumerPublicationService);
+            this.ServicesList.Add(_providerRequestService);
+            this.ServicesList.Add(_consumerRequestService);
         }
+        #region Private Methods
+
+        private IActionResult HandleChannelFault(ChannelFaultException e)
+        {
+            if (e.Message.IndexOf("Provided header security token") >= 0)
+            {
+                return Unauthorized(new { message = e.Message });
+            }
+            return NotFound(new { message = e.Message });
+        }
+
+        private IActionResult GenericOpenSession(Func<Session> action)
+        {
+            try
+            {
+                var session = action.Invoke();
+
+                // Sending the link to the route for "CloseSession", but that requires a DELETE action to be taken.
+                // This is set for semantic purposes for the "Location" header that is returned.
+                return Created(new Uri(Url.Link("CloseSession", new { session.Id })), session);
+            }
+            catch (ChannelFaultException e)
+            {
+                return HandleChannelFault(e);
+            }
+            catch (OperationFaultException e)
+            {
+                return UnprocessableEntity(new { message = e.Message });
+            }
+        }
+
+        #endregion
 
         [HttpGet]
         public IEnumerable<ISBM.Web.Models.Channel> Get()
@@ -60,11 +88,7 @@ namespace ISBM.Web.Controllers
             }
             catch (ChannelFaultException e)
             {
-                if (e.Message.IndexOf("Provided header security token") >= 0)
-                {
-                    return Unauthorized(new { message = e.Message });
-                }
-                return NotFound(new { message = e.Message });
+                return HandleChannelFault(e);
             }
         }
 
@@ -93,11 +117,7 @@ namespace ISBM.Web.Controllers
             }
             catch (ChannelFaultException e)
             {
-                if (e.Message.IndexOf("Provided header security token") >= 0)
-                {
-                    return Unauthorized(new { message = e.Message });
-                }
-                return NotFound(new { message = e.Message });
+                return HandleChannelFault(e);
             }
         }
 
@@ -114,11 +134,7 @@ namespace ISBM.Web.Controllers
             }
             catch (ChannelFaultException e)
             {
-                if (e.Message.IndexOf("Provided header security token") >= 0)
-                {
-                    return Unauthorized(new { message = e.Message });
-                }
-                return NotFound(new { message = e.Message });
+                return HandleChannelFault(e);
             }
         }
 
@@ -136,11 +152,7 @@ namespace ISBM.Web.Controllers
             }
             catch (ChannelFaultException e)
             {
-                if (e.Message.IndexOf("Provided header security token") >= 0)
-                {
-                    return Unauthorized(new { message = e.Message });
-                }
-                return NotFound(new { message = e.Message });
+                return HandleChannelFault(e);
             }
         }
 
@@ -158,11 +170,7 @@ namespace ISBM.Web.Controllers
             }
             catch (ChannelFaultException e)
             {
-                if (e.Message.IndexOf("Provided header security token") >= 0)
-                {
-                    return Unauthorized(new { message = e.Message });
-                }
-                return NotFound(new { message = e.Message });
+                return HandleChannelFault(e);
             }
         }
 
@@ -173,25 +181,12 @@ namespace ISBM.Web.Controllers
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public IActionResult OpenPublicationSession(string channelUri)
         {
-            try
+            return GenericOpenSession(() =>
             {
                 var sessionId = _providerPublicationService.OpenPublicationSession(channelUri);
-                return Created(string.Empty, new Session { Id = sessionId, Type = SessionType.PublicationProvider });
-            }
-            catch (ChannelFaultException e)
-            {
-                if (e.Message.IndexOf("Provided header security token") >= 0)
-                {
-                    return Unauthorized(new { message = e.Message });
-                }
-                return NotFound(new { message = e.Message });
-            }
-            catch (OperationFaultException e)
-            {
-                return UnprocessableEntity(new { message = e.Message });
-            }
+                return new Session { Id = sessionId, Type = SessionType.PublicationProvider };
+            });
         }
-
 
         [HttpPost("{channelUri}/subscription-sessions")]
         [ProducesResponseType(StatusCodes.Status201Created)]
@@ -205,18 +200,16 @@ namespace ISBM.Web.Controllers
             {
                 return BadRequest(new { message = "Malformed session object in HTTP body." });
             }
-            try
+            if (session.XPathNamespaces == null)
             {
-                if (session.XPathNamespaces == null)
-                {
-                    session.XPathNamespaces = new XPathNamespace[0];
-                }
-
-                if (session.XPathNamespaces.Select(m => m.Prefix).Distinct().Count() < session.XPathNamespaces.Count())
-                {
-                    return BadRequest(new { message = "Duplicate namespace prefixes provided." });
-                }
-
+                session.XPathNamespaces = new XPathNamespace[0];
+            }
+            if (session.XPathNamespaces.Select(m => m.Prefix).Distinct().Count() < session.XPathNamespaces.Count())
+            {
+                return BadRequest(new { message = "Duplicate namespace prefixes provided." });
+            }
+            return GenericOpenSession(() =>
+            {
                 var sessionId = _consumerPublicationService
                     .OpenSubscriptionSession(channelUri,
                         session.Topics,
@@ -226,23 +219,59 @@ namespace ISBM.Web.Controllers
 
                 session.Id = sessionId;
                 session.Type = SessionType.PublicationConsumer;
+                return session;
+            });
+        }
 
-                // Sending the link to the route for "ClosePublicationSession", but that requires a DELETE action to be taken.
-                // This is set for semantic purposes for the "Location" header that is returned.
-                return Created(new Uri(Url.Link("ClosePublicationSession", new { sessionId })), session);
-            }
-            catch (ChannelFaultException e)
+        [HttpPost("{channelUri}/consumer-request-sessions")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+        public IActionResult OpenConsumerRequestSession(string channelUri, [FromBody]string ListenerURL)
+        {
+            return GenericOpenSession(() =>
             {
-                if (e.Message.IndexOf("Provided header security token") >= 0)
-                {
-                    return Unauthorized(new { message = e.Message });
-                }
-                return NotFound(new { message = e.Message });
-            }
-            catch (OperationFaultException e)
+                var sessionId = _consumerRequestService.OpenConsumerRequestSession(channelUri, ListenerURL);
+                return new Session { Id = sessionId, Type = SessionType.RequestConsumer };
+            });
+        }
+
+        [HttpPost("{channelUri}/provider-request-sessions")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+        public IActionResult OpenProviderRequestSession(string channelUri, [FromBody]Session session)
+        {
+            if (session == null)
             {
-                return UnprocessableEntity(new { message = e.Message });
+                return BadRequest(new { message = "Malformed session object in HTTP body." });
             }
+            if (session.XPathNamespaces == null)
+            {
+                session.XPathNamespaces = new XPathNamespace[0];
+            }
+            if (session.XPathNamespaces.Select(m => m.Prefix).Distinct().Count() < session.XPathNamespaces.Count())
+            {
+                return BadRequest(new { message = "Duplicate namespace prefixes provided." });
+            }
+            return GenericOpenSession(() =>
+            {
+
+                var sessionId = _providerRequestService.OpenProviderRequestSession(
+                        channelUri,
+                        session.Topics,
+                        session.ListenerUrl,
+                        session.XPathExpression,
+                        session.XPathNamespaces.Select(m => new Namespace { NamespaceName = m.Namespace, NamespacePrefix = m.Prefix }).ToArray());
+
+                session.Id = sessionId;
+                session.Type = SessionType.RequestProvider;
+
+                return session;
+            });
         }
     }
 }

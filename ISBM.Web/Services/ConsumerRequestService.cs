@@ -35,7 +35,15 @@ namespace ISBM.Web.Services
 
         public void ExpireRequest(string SessionID, string MessageID)
         {
-            throw new NotImplementedException();
+            var session = CheckSession(SessionID, SessionType.Requester);
+            var message = this.appDbContext.Set<Message>().FirstOrDefault(m => m.CreatedBySessionId == session.Id && m.Id == new Guid(MessageID));
+            if (message == null)
+            {
+                return;
+            }
+
+            message.ExpiredByCreatorOn = DateTime.UtcNow;
+            appDbContext.SaveChanges();
         }
 
         public string OpenConsumerRequestSession(string ChannelURI, string ListenerURL)
