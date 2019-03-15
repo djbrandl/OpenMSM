@@ -7,6 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Xml;
 using System.Xml.XPath;
 
 namespace ISBM.Web.Services
@@ -103,5 +105,65 @@ namespace ISBM.Web.Services
                 throw new SessionFaultException("Provided XPathExpression does not compile or is not a valid XPathExpression.");
             }
         }
+
+        protected ISBM.Data.Models.MessagesSession GetNextMessageSession(Guid sessionId, Expression<Func<MessagesSession, bool>> optionalPredicate = null)
+        {
+            Expression<Func<MessagesSession, bool>> predicate = m => m.SessionId == sessionId // for the session
+                   && !m.Message.ExpiredByCreatorOn.HasValue // that is not expired by the publisher 
+                   && (!m.Message.ExpiresOn.HasValue || m.Message.ExpiresOn.Value >= DateTime.UtcNow); // and has not expired by by the date that it was set on creation
+
+            var conditional = appDbContext.Set<MessagesSession>().Include(m => m.Message).ThenInclude(m => m.MessageTopics)
+                   .OrderBy(m => m.Message.CreatedOn) // with the lowest created on date
+                   .Where(predicate);
+
+            if (optionalPredicate == null)
+            {
+                return conditional.FirstOrDefault(); 
+            }
+            else
+            {
+                return conditional.FirstOrDefault(optionalPredicate);
+            }
+        }
+
+
+        protected XmlElement EvalateFilter(XmlElement messageContent, IList<ISBM.Data.Models.SessionNamespace> namespaces, string xPathExpression)
+        {
+            // If there is no filtering of message content
+            if (string.IsNullOrWhiteSpace(xPathExpression) || namespaces == null || !namespaces.Any())
+            {
+                return messageContent;
+            }
+
+            var expr = System.Xml.XPath.XPathExpression.Compile(xPathExpression);
+            var navigator = messageContent.OwnerDocument.CreateNavigator();
+            foreach (var ns in namespaces)
+            {
+                var nsManager = new XmlNamespaceManager(navigator.NameTable);
+                nsManager.AddNamespace(ns.Prefix, ns.Name);
+            }
+            switch (expr.ReturnType)
+            {
+                // If the expression evaluates to a boolean, return full message content if the boolean evaluted to true, otherwise return null
+                case XPathResultType.Boolean:
+                    return (bool)navigator.Evaluate(expr) ? messageContent : null;
+                // If the expression evaluates to a number, return full message content if the number is greater than 0, otherwise return null
+                // I am imagining a scenario where you are counting the number of child elements to filter as this scenario
+                case XPathResultType.Number:
+                    return (int)navigator.Evaluate(expr) > 0 ? messageContent : null;
+                // If the expression evaluates to a string, return full message content if the string is not empty, otherwise return null
+                case XPathResultType.String:
+                    return string.IsNullOrWhiteSpace(navigator.Evaluate(expr).ToString()) ? null : messageContent;
+
+                // If the expression evaluates to a node set, return full message content if the node set count is greater than 0, otherwise return null
+                case XPathResultType.NodeSet:
+                    var nodes = navigator.Select(expr);
+                    return nodes.Count > 0 ? messageContent : null;
+                default:
+                    return null;
+            }
+        }
+
+
     }
 }

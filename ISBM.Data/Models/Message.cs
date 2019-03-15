@@ -34,7 +34,7 @@ namespace ISBM.Data.Models
             }
         }
 
-        public virtual Session Session { get; set; }
+        public virtual Session CreatedBySession { get; set; }
         public virtual ICollection<MessagesSession> MessagesSessions { get; set; }
         public virtual ICollection<MessageTopic> MessageTopics { get; set; }
         public virtual ICollection<Message> ResponseMessages { get; set; }
