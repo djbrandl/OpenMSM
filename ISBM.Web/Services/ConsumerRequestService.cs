@@ -2,6 +2,7 @@
 using ISBM.Data;
 using ISBM.Data.Models;
 using ISBM.ServiceDefinitions;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +18,19 @@ namespace ISBM.Web.Services
 
         public void CloseConsumerRequestSession(string SessionID)
         {
-            throw new NotImplementedException();
+            var session = CheckSession(SessionID, SessionType.Requester);
+            session.IsClosed = true;
+
+            // due to lazy loading not working in Entity Framework Core at time of coding, I am making an extra call here.
+            var messages = this.appDbContext.Set<Message>().Where(m => m.CreatedBySessionId == session.Id).ToList();
+
+            // expire every message for the session that is not already expired
+            foreach (var message in messages.Where(m => !m.ExpiredByCreatorOn.HasValue))
+            {
+                message.ExpiredByCreatorOn = DateTime.UtcNow;
+            }
+
+            this.appDbContext.SaveChanges();
         }
 
         public void ExpireRequest(string SessionID, string MessageID)
@@ -58,18 +71,86 @@ namespace ISBM.Web.Services
 
         public string PostRequest(string SessionID, XmlElement MessageContent, string Topic, [XmlElement(DataType = "duration")] string Expiry)
         {
+            var session = CheckSession(SessionID, SessionType.Requester);
 
-            throw new NotImplementedException();
+            // get the responder sessions
+            var responderSessions = this.appDbContext.Set<Session>().Include(m => m.SessionTopics)
+                .Where(m => m.Type == SessionType.Responder && m.ChannelId == session.ChannelId).ToList();
+
+            // filter the sessions so that we only get subscribers that have any of the same topics as the posted message
+            responderSessions.RemoveAll(m => !m.SessionTopics.Select(v => v.Topic).Contains(Topic));
+            
+            DateTime? expiration = null;
+            if (!string.IsNullOrWhiteSpace(Expiry))
+            {
+                var expirationTimeSpan = XmlConvert.ToTimeSpan(Expiry);
+                expiration = DateTime.UtcNow.Add(expirationTimeSpan);
+            }
+            // create a message
+            var message = new Message
+            {
+                CreatedOn = DateTime.UtcNow,
+                CreatedBySessionId = session.Id,
+                ExpiresOn = expiration,
+                Type = MessageType.Request,
+                MessageBody = MessageContent.OuterXml
+            };
+            if (!string.IsNullOrWhiteSpace(Topic))
+            {
+                message.MessageTopics = new[] { new MessageTopic { Topic = Topic } };
+            }
+
+            // link responder sessions to the new message
+            message.MessagesSessions = responderSessions.Select(m => new MessagesSession
+            {
+                SessionId = m.Id
+            }).ToList();
+
+            this.appDbContext.Add(message);
+            this.appDbContext.SaveChanges();
+
+            return message.Id.ToString();
         }
 
         public ResponseMessage ReadResponse(string SessionID, string RequestMessageID)
         {
-            throw new NotImplementedException();
+            var session = CheckSession(SessionID, SessionType.Requester);
+
+            // get the message session object
+            var messageSession = GetNextMessageSession(session.Id, m => m.Message.Type == MessageType.Response && m.Message.RequestMessageId == new Guid(RequestMessageID));
+
+            if (messageSession == null)
+            {
+                return null;
+            }
+
+            var content = new XmlDocument();
+            content.LoadXml(messageSession.Message.MessageBody);
+
+            messageSession.MessageReadOn = DateTime.UtcNow; // mark the message as read
+            appDbContext.SaveChanges(); // save changes now in case there is an error parsing the message body
+
+            return new ResponseMessage
+            {
+                MessageContent = content.DocumentElement,
+                MessageID = messageSession.MessageId.ToString()
+            };
         }
 
         public void RemoveResponse(string SessionID, string RequestMessageID)
         {
-            throw new NotImplementedException();
+            var session = CheckSession(SessionID, SessionType.Requester);
+
+            // get the message session object that is a request
+            var messageSession = GetNextMessageSession(session.Id, m => m.Message.Type == MessageType.Response && m.Message.RequestMessageId == new Guid(RequestMessageID));
+
+            if (messageSession == null) // there were no requests to remove
+            {
+                return;
+            }
+
+            appDbContext.Remove(messageSession);
+            appDbContext.SaveChanges();
         }
     }
 }
