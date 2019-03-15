@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using ISBM.Data;
 using ISBM.Data.Models;
 using ISBM.ServiceDefinitions;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,7 @@ namespace ISBM.Web.Services
 {
     public class ConsumerPublicationService : ServiceBase, IConsumerPublicationServiceSoap
     {
-        public ConsumerPublicationService(DbContext dbContext, IMapper mapper) : base(dbContext, mapper) { }
+        public ConsumerPublicationService(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper) { }
 
         #region Private Methods
 
@@ -97,22 +98,7 @@ namespace ISBM.Web.Services
             {
                 throw new OperationFaultException("Channel type is not of type \"Publication\".");
             }
-
-            if (!string.IsNullOrWhiteSpace(XPathExpression))
-            {
-                try
-                {
-                    var expr = System.Xml.XPath.XPathExpression.Compile(XPathExpression);
-                    if (new XPathResultType[] { XPathResultType.Any, XPathResultType.Error, XPathResultType.Navigator }.Contains(expr.ReturnType))
-                    {
-                        throw new SessionFaultException("Current implementation does not handle XPathExpressions which return XPathResultType.Any/Error/Navigator.");
-                    }
-                }
-                catch (XPathException)
-                {
-                    throw new SessionFaultException("Provided XPathExpression does not compile or is not a valid XPathExpression.");
-                }
-            }
+            ValidateXPath(XPathExpression);
 
             var session = new Session
             {

@@ -21,20 +21,30 @@ namespace ISBM.Web.Controllers
         private ProviderPublicationService _providerPublicationService { get; set; }
         private ConsumerPublicationService _consumerPublicationService { get; set; }
 
-        public ChannelsController(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper)
+        //public ChannelsController(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper)
+        //{
+        //    _channelManagementService = new ChannelManagementService(dbContext, mapper);
+        //    _providerPublicationService = new ProviderPublicationService(dbContext, mapper);
+        //    _consumerPublicationService = new ConsumerPublicationService(dbContext, mapper);
+        //    this.servicesList.Add(_channelManagementService);
+        //    this.servicesList.Add(_providerPublicationService);
+        //    this.servicesList.Add(_consumerPublicationService);
+        //}
+
+        public ChannelsController(ChannelManagementService channelManagementService, ProviderPublicationService providerPublicationService, ConsumerPublicationService consumerPublicationService, IMapper mapper) : base(mapper)
         {
-            _channelManagementService = new ChannelManagementService(dbContext, mapper);
-            _providerPublicationService = new ProviderPublicationService(dbContext, mapper);
-            _consumerPublicationService = new ConsumerPublicationService(dbContext, mapper);
-            this.servicesList.Add(_channelManagementService);
-            this.servicesList.Add(_providerPublicationService);
-            this.servicesList.Add(_consumerPublicationService);
+            this._channelManagementService = channelManagementService;
+            this._providerPublicationService = providerPublicationService;
+            this._consumerPublicationService = consumerPublicationService;
+            this.ServicesList.Add(_channelManagementService);
+            this.ServicesList.Add(_providerPublicationService);
+            this.ServicesList.Add(_consumerPublicationService);
         }
 
         [HttpGet]
         public IEnumerable<ISBM.Web.Models.Channel> Get()
         {
-            return _channelManagementService.GetChannels().Select(m => mapper.Map<ISBM.Web.Models.Channel>(m));
+            return _channelManagementService.GetChannels().Select(m => Mapper.Map<ISBM.Web.Models.Channel>(m));
         }
 
         [HttpGet("{channelUri}")]
@@ -46,7 +56,7 @@ namespace ISBM.Web.Controllers
             try
             {
                 var channel = _channelManagementService.GetChannel(System.Net.WebUtility.UrlDecode(channelUri));
-                return Ok(mapper.Map<ISBM.Web.Models.Channel>(channel));
+                return Ok(Mapper.Map<ISBM.Web.Models.Channel>(channel));
             }
             catch (ChannelFaultException e)
             {

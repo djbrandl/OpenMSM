@@ -7,15 +7,17 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml.XPath;
 
 namespace ISBM.Web.Services
 {
     public abstract class ServiceBase
     {
         protected readonly IMapper mapper;
-        protected readonly DbContext appDbContext;
+        protected readonly AppDbContext appDbContext;
         private string _accessToken { get; set; }
-        public ServiceBase(DbContext dbContext, IMapper mapper)
+
+        public ServiceBase(AppDbContext dbContext, IMapper mapper)
         {
             this.mapper = mapper;
             this.appDbContext = dbContext;
@@ -79,6 +81,27 @@ namespace ISBM.Web.Services
                 throw new SessionFaultException("Provided header security token does not match the token assigned to the session's channel.");
             }
             return session;
+        }
+
+        protected void ValidateXPath(string xPathExpression)
+        {
+            if (string.IsNullOrWhiteSpace(xPathExpression))
+            {
+                return;
+            }
+
+            try
+            {
+                var expr = XPathExpression.Compile(xPathExpression);
+                if (new XPathResultType[] { XPathResultType.Any, XPathResultType.Error, XPathResultType.Navigator }.Contains(expr.ReturnType))
+                {
+                    throw new SessionFaultException("Current implementation does not handle XPathExpressions which return XPathResultType.Any/Error/Navigator.");
+                }
+            }
+            catch (XPathException)
+            {
+                throw new SessionFaultException("Provided XPathExpression does not compile or is not a valid XPathExpression.");
+            }
         }
     }
 }
