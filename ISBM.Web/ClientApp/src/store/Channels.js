@@ -38,7 +38,9 @@ const channelApiFunctions = {
         try {
             const response = await fetch(url, options);
             const channels = await response.json();
-            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+            if (dispatch) {
+                dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+            }
             return channels;
         }
         catch (e) {
@@ -55,7 +57,9 @@ const channelApiFunctions = {
             body: JSON.stringify(object)
         };
         const response = await fetch(url, options);
-        dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+        if (dispatch) {
+            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+        }
         return response;
     }
 };
