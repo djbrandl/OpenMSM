@@ -2,7 +2,8 @@
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { actionCreators } from '../store/Channels';
-import { Jumbotron, Collapse, Card, CardTitle, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, Form, FormGroup, FormText, Label, Input, Button } from 'reactstrap';
+import { Jumbotron, Collapse, Card, CardTitle, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, FormGroup, FormText, Label, Input, Button, InputGroup, InputGroupAddon } from 'reactstrap';
+import { Formik, Form, Field, FieldArray, ErrorMessage } from 'formik';
 import classnames from 'classnames';
 
 class FetchData extends Component {
@@ -52,6 +53,12 @@ class FetchData extends Component {
                     <NavItem>
                         <NavLink className={classnames({ active: this.props.activeTab === 'Create' })} onClick={() => { this.props.setActiveTab('Create') }}>Create Channel</NavLink>
                     </NavItem>
+                    <NavItem>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Add' })} onClick={() => { this.props.setActiveTab('Add') }}>Add Security Tokens</NavLink>
+                    </NavItem>
+                    <NavItem>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Remove' })} onClick={() => { this.props.setActiveTab('Remove') }}>Remove Security Tokens</NavLink>
+                    </NavItem>
                 </Nav>
                 <TabContent activeTab={this.props.activeTab}>
                     <TabPane tabId="Get">
@@ -70,8 +77,23 @@ class FetchData extends Component {
                             </Col>
                         </Row>
                     </TabPane>
+                    <TabPane tabId="Add">
+                        <Row>
+                            <Col sm="12">
+                                <br />
+                                {renderAddTokens(this.props)}
+                            </Col>
+                        </Row>
+                    </TabPane>
+                    <TabPane tabId="Remove">
+                        <Row>
+                            <Col sm="12">
+                                <br />
+                                {renderRemoveTokens(this.props)}
+                            </Col>
+                        </Row>
+                    </TabPane>
                 </TabContent>
-                {renderSelectedChannel(this.props)}
             </div>
         );
     }
@@ -79,45 +101,164 @@ class FetchData extends Component {
 
 function renderCreateForm(props) {
     return (
-        <Form onSubmit={props.createChannel} name="createChannel">
-            <h2>Create a new channel</h2>
-            <FormGroup row>
-                <Label for="channelUri" sm={2}>URI</Label>
-                <Col sm={10}>
-                    <Input type="text" name="uri" id="uri" placeholder="Channel URI" />
-                </Col>
-            </FormGroup>
-            <FormGroup row>
-                <Label for="channelType" sm={2}>Type</Label>
-                <Col sm={10}>
-                    <Input type="select" name="type">
-                        <option>Publication</option>
-                        <option>Request</option>
-                    </Input>
-                </Col>
-            </FormGroup>
-            <FormGroup row>
-                <Label for="description" sm={2}>Description</Label>
-                <Col sm={10}>
-                    <Input type="textarea" name="description" placeholder="Channel Description" />
-                </Col>
-            </FormGroup>
-            <FormGroup row>
-                <Label for="securityToken" sm={2}>Security Token</Label>
-                <Col sm={10}>
-                    <Input type="password" name="securityToken" id="securityToken" placeholder="Security Token" />
-                    <FormText color="muted">
-                        Current front-end implementation of this demonstration only allows for the user to enter just 1 security token when creating a channel. The underlying API driving the behavior <strong>does</strong> allow for multiple security tokens to be assigned to the channel on creation.
-                    </FormText>
-                </Col>
-            </FormGroup>
-            <Button>Submit</Button>
-        </Form>
+        <Formik
+            initialValues={{ uri: '', type: 'Publication', description: '', token: '' }}
+            validate={values => {
+                let errors = {};
+                if (!values.uri) {
+                    errors.uri = 'Required';
+                }
+                return errors;
+            }}
+            onSubmit={(values, { setSubmitting, resetForm }) => {
+                props.createChannel({ data: values, setFinished: () => resetForm() });
+            }}>
+
+            {({ isSubmitting }) => (
+                <Form>
+                    <h2>Create a new channel</h2>
+                    <FormGroup row>
+                        <Label for="uri" sm={2}>URI</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" type="text" name="uri" />
+                            <ErrorMessage name="uri" component="div" />
+                        </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                        <Label for="channelType" sm={2}>Type</Label>
+                        <Col sm={10}>
+                            <Field component="select" className="form-control" name="type">
+                                <option>Publication</option>
+                                <option>Request</option>
+                            </Field>
+                        </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                        <Label for="description" sm={2}>Description</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" component="textarea" name="description" />
+                        </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                        <Label for="token" sm={2}>Security Token</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" type="password" name="token" />
+                            <FormText color="muted">
+                                Current front-end implementation of this demonstration only allows for the user to enter just 1 security token when creating a channel. The underlying API driving the behavior <strong>does</strong> allow for multiple security tokens to be assigned to the channel on creation.
+                            </FormText>
+                        </Col>
+                    </FormGroup>
+                    <Button type="submit" disabled={isSubmitting}>Submit</Button>
+                </Form>
+            )}
+        </Formik>
     );
 }
 
-function renderSelectedChannel(props) {
+function renderAddTokens(props) {
+    return (
+        <Formik
+            initialValues={{ accessToken: '', channelUri: '', securityTokens: [] }}
+            onSubmit={(values, { setSubmitting, resetForm }) => {
+                props.addSecurityTokens({ data: values, setFinished: () => resetForm() });
+            }}>
+            {({ values, isSubmitting }) => (
+                <Form>
+                    <FieldArray
+                        name="securityTokens"
+                        render={arrayHelpers => (
+                            <div>
+                                <FormGroup row>
+                                    <Label for="channelUri" sm={2}>URI</Label>
+                                    <Col sm={10}>
+                                        <Field className="form-control" type="text" name="channelUri" />
+                                        <ErrorMessage name="channelUri" component="div" />
+                                    </Col>
+                                </FormGroup>
+                                <FormGroup row>
+                                    <Label for="accessToken" sm={2}>Access Token</Label>
+                                    <Col sm={10}>
+                                        <Field className="form-control" type="password" name="accessToken" />
+                                    </Col>
+                                </FormGroup>
+                                {!values.securityTokens || values.securityTokens.length === 0 ?
+                                    <FormGroup row>
+                                        <Button onClick={() => arrayHelpers.push({ token: '' })}>Add Token to List</Button>
+                                    </FormGroup>
+                                    : ('')}
+                                {values.securityTokens.map((securityToken, index) => (
+                                    <FormGroup row key={index} >
+                                        <InputGroup size="lg">
+                                            <Field className='form-control' name={`securityTokens[${index}].token`} />
+                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.push({ token: '' })}>&nbsp;+&nbsp;</Button></InputGroupAddon>
+                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
+                                        </InputGroup>
+                                    </FormGroup>
+                                ))}
+                                <br />
+                                {values.securityTokens && values.securityTokens.length > 0 ? (
+                                    <Button type="submit" disabled={isSubmitting}>Submit</Button>
+                                ) : ('')}
+                            </div>
+                        )}
+                    />
+                </Form>
+            )}
+        </Formik >
+    )
+}
 
+function renderRemoveTokens(props) {
+    return (
+        <Formik
+            initialValues={{ accessToken: '', channelUri: '', securityTokens: [] }}
+            onSubmit={(values, { setSubmitting, resetForm }) => {
+                props.removeSecurityTokens({ data: values, setFinished: () => resetForm() });
+            }}>
+            {({ values, isSubmitting }) => (
+                <Form>
+                    <FieldArray
+                        name="securityTokens"
+                        render={arrayHelpers => (
+                            <div>
+                                <FormGroup row>
+                                    <Label for="channelUri" sm={2}>URI</Label>
+                                    <Col sm={10}>
+                                        <Field className="form-control" type="text" name="channelUri" />
+                                        <ErrorMessage name="channelUri" component="div" />
+                                    </Col>
+                                </FormGroup>
+                                <FormGroup row>
+                                    <Label for="accessToken" sm={2}>Access Token</Label>
+                                    <Col sm={10}>
+                                        <Field className="form-control" type="password" name="accessToken" />
+                                    </Col>
+                                </FormGroup>
+                                {!values.securityTokens || values.securityTokens.length === 0 ?
+                                    <FormGroup row>
+                                        <Button onClick={() => arrayHelpers.push({ token: '' })}>Add Token to List</Button>
+                                    </FormGroup>
+                                    : ('')}
+                                {values.securityTokens.map((securityToken, index) => (
+                                    <FormGroup row key={index} >
+                                        <InputGroup size="lg">
+                                            <Field className='form-control' name={`securityTokens[${index}].token`} />
+                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.push({ token: '' })}>&nbsp;+&nbsp;</Button></InputGroupAddon>
+                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
+                                        </InputGroup>
+                                    </FormGroup>
+                                ))}
+                                <br />
+                                {values.securityTokens && values.securityTokens.length > 0 ? (
+                                    <Button type="submit" disabled={isSubmitting}>Submit</Button>
+                                ) : ('')}
+                            </div>
+                        )}
+                    />
+                </Form>
+            )}
+        </Formik >
+    )
 }
 
 function renderGetChannels(props) {
@@ -128,7 +269,7 @@ function renderGetChannels(props) {
                     <FormGroup row>
                         <Label for="token" sm={3}>Set Access Token</Label>
                         <Col sm={7}>
-                            <Input type="password" name="token" id="token" placeholder="Access Token" />
+                            <Input type="text" name="token" id="token" placeholder="Access Token" />
                         </Col>
                         <Button sm="2">Set</Button>
                     </FormGroup>

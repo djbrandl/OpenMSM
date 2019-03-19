@@ -3,6 +3,8 @@
 export const REQUEST_CHANNELS = 'REQUEST_CHANNELS'
 export const RECEIVE_CHANNELS = 'RECEIVE_CHANNELS'
 export const SET_ACCESS_TOKEN = 'SET_ACCESS_TOKEN'
+export const ADD_ACCESS_TOKEN = 'ADD_ACCESS_TOKEN'
+export const REMOVE_ACCESS_TOKEN = 'REMOVE_ACCESS_TOKEN'
 export const CREATE_CHANNELS_REQUEST = 'CREATE_CHANNELS_REQUEST'
 export const CREATE_CHANNELS_RECEIVE = 'CREATE_CHANNELS_RECEIVE'
 export const CHANGE_TAB = 'CHANGE_TAB'
@@ -27,7 +29,7 @@ const buildResponse = (response) => {
 
 const channelApiFunctions = {
     getChannels: async (accessToken, dispatch) => {
-        const url = 'api/Channels/';
+        const url = 'api/channels/';
         const options = {
             method: 'GET',
             headers: {
@@ -48,10 +50,42 @@ const channelApiFunctions = {
         }
     },
     createChannel: async (object, dispatch) => {
-        const url = 'api/Channels/';
+        const url = 'api/channels/';
         const options = {
             method: 'POST',
             headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(object)
+        };
+        const response = await fetch(url, options);
+        if (dispatch) {
+            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+        }
+        return response;
+    },
+    addSecurityTokens: async (channelUri, accessToken, object, dispatch) => {
+        const url = 'api/channels/' + channelUri + '/security-tokens';
+        const options = {
+            method: 'POST',
+            headers: {
+                "Authorization": accessToken,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(object)
+        };
+        const response = await fetch(url, options);
+        if (dispatch) {
+            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+        }
+        return response;
+    },
+    removeSecurityTokens: async (channelUri, accessToken, object, dispatch) => {
+        const url = 'api/channels/' + channelUri + '/security-tokens';
+        const options = {
+            method: 'DELETE',
+            headers: {
+                "Authorization": accessToken,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify(object)
@@ -76,7 +110,6 @@ export const actionCreators = {
             object[key] = value;
         });
         dispatch({ type: SET_ACCESS_TOKEN, accessToken: object['token'] });
-
         dispatch({ type: REQUEST_CHANNELS });
         const channels = await channelApiFunctions.getChannels(object['token'], dispatch);
         dispatch({ type: RECEIVE_CHANNELS, channels });
@@ -84,26 +117,24 @@ export const actionCreators = {
     setActiveTab: (tab) => async (dispatch, getState) => {
         dispatch({ type: CHANGE_TAB, tab: tab });
     },
+    addSecurityTokens: (event) => async (dispatch, getState) => {
+        const response = await channelApiFunctions.addSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens);
+        event.setFinished();
+        dispatch({ type: ADD_ACCESS_TOKEN });
+    },
+    removeSecurityTokens: (event) => async (dispatch, getState) => {
+        const response = await channelApiFunctions.removeSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens);
+        event.setFinished();
+        dispatch({ type: REMOVE_ACCESS_TOKEN });
+    },
     createChannel: (event) => async (dispatch, getState) => {
         dispatch({ type: CREATE_CHANNELS_REQUEST });
-
-        event.preventDefault();
-        const data = new FormData(event.target);
-        var object = {};
-        data.forEach(function (value, key) {
-            if (key === 'securityToken') {
-                object['securityTokens'] = [];
-                if (value !== '') {
-                    object['securityTokens'].push({ "token": value });
-                }
-            } else {
-                object[key] = value;
-            }
-        });
-
-        await channelApiFunctions.createChannel(object, dispatch);
+        let values = { ...event.data, securityTokens: [] };
+        values.securityTokens.push({ token: values.token });
+        delete values.token;
+        await channelApiFunctions.createChannel(values, dispatch);
+        event.setFinished();
         dispatch({ type: CREATE_CHANNELS_RECEIVE });
-        //dispatch(reset('createChannel'));
     },
     requestChannels: () => async (dispatch, getState) => {
         dispatch({ type: REQUEST_CHANNELS });
@@ -172,7 +203,6 @@ export const reducer = (state, action) => {
     }
 
     if (action.type === SET_LAST_API) {
-        console.log(action.lastApiResponse);
         return {
             ...state,
             lastApiCallUrl: action.lastApiCallUrl,

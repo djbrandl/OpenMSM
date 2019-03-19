@@ -83,7 +83,7 @@ namespace ISBM.Web.Controllers
         {
             try
             {
-                var channel = _channelManagementService.GetChannel(System.Net.WebUtility.UrlDecode(channelUri));
+                var channel = _channelManagementService.GetChannel(System.Net.WebUtility.UrlDecode(channelUri).Trim());
                 return Ok(Mapper.Map<ISBM.Web.Models.Channel>(channel));
             }
             catch (ChannelFaultException e)
@@ -108,8 +108,8 @@ namespace ISBM.Web.Controllers
             }
             try
             {
-                var tokens = channel.SecurityTokens == null ? new XmlElement[0] : channel.SecurityTokens.Select(m => m.Token).ToXmlElements();
-                _channelManagementService.CreateChannel(channel.Uri,
+                var tokens = channel.SecurityTokens == null ? new XmlElement[0] : channel.SecurityTokens.Select(m => m.Token).Where(m => !string.IsNullOrWhiteSpace(m)).ToXmlElements();
+                _channelManagementService.CreateChannel(channel.Uri.Trim(),
                     channel.Type == Models.ChannelType.Publication ? ServiceDefinitions.ChannelType.Publication : ServiceDefinitions.ChannelType.Request,
                     channel.Description,
                     tokens);
@@ -129,7 +129,7 @@ namespace ISBM.Web.Controllers
         {
             try
             {
-                _channelManagementService.DeleteChannel(System.Net.WebUtility.UrlDecode(channelUri));
+                _channelManagementService.DeleteChannel(System.Net.WebUtility.UrlDecode(channelUri).Trim());
                 return NoContent();
             }
             catch (ChannelFaultException e)
@@ -147,7 +147,7 @@ namespace ISBM.Web.Controllers
             try
             {
                 var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
-                _channelManagementService.AddSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri), tokens);
+                _channelManagementService.AddSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri).Trim(), tokens);
                 return Created(new Uri(Url.Link("AddSecurityTokens", new { channelUri })), null);
             }
             catch (ChannelFaultException e)
@@ -165,7 +165,7 @@ namespace ISBM.Web.Controllers
             try
             {
                 var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
-                _channelManagementService.RemoveSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri), tokens);
+                _channelManagementService.RemoveSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri).Trim(), tokens);
                 return NoContent();
             }
             catch (ChannelFaultException e)
@@ -183,7 +183,7 @@ namespace ISBM.Web.Controllers
         {
             return GenericOpenSession(() =>
             {
-                var sessionId = _providerPublicationService.OpenPublicationSession(channelUri);
+                var sessionId = _providerPublicationService.OpenPublicationSession(channelUri.Trim());
                 return new Session { Id = sessionId, Type = SessionType.PublicationProvider };
             });
         }
@@ -211,7 +211,7 @@ namespace ISBM.Web.Controllers
             return GenericOpenSession(() =>
             {
                 var sessionId = _consumerPublicationService
-                    .OpenSubscriptionSession(channelUri,
+                    .OpenSubscriptionSession(channelUri.Trim(),
                         session.Topics,
                         session.ListenerUrl,
                         session.XPathExpression,
@@ -232,7 +232,7 @@ namespace ISBM.Web.Controllers
         {
             return GenericOpenSession(() =>
             {
-                var sessionId = _consumerRequestService.OpenConsumerRequestSession(channelUri, ListenerURL);
+                var sessionId = _consumerRequestService.OpenConsumerRequestSession(channelUri.Trim(), ListenerURL);
                 return new Session { Id = sessionId, Type = SessionType.RequestConsumer };
             });
         }
@@ -261,7 +261,7 @@ namespace ISBM.Web.Controllers
             {
 
                 var sessionId = _providerRequestService.OpenProviderRequestSession(
-                        channelUri,
+                        channelUri.Trim(),
                         session.Topics,
                         session.ListenerUrl,
                         session.XPathExpression,
