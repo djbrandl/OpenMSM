@@ -65,7 +65,8 @@ const channelApiFunctions = {
         return response;
     },
     addSecurityTokens: async (channelUri, accessToken, object, dispatch) => {
-        const url = 'api/channels/' + channelUri + '/security-tokens';
+        const url = 'api/channels/' + encodeURIComponent(channelUri) + '/security-tokens';
+        console.log(url);
         const options = {
             method: 'POST',
             headers: {
@@ -81,7 +82,7 @@ const channelApiFunctions = {
         return response;
     },
     removeSecurityTokens: async (channelUri, accessToken, object, dispatch) => {
-        const url = 'api/channels/' + channelUri + '/security-tokens';
+        const url = 'api/channels/' + encodeURIComponent(channelUri) + '/security-tokens';
         const options = {
             method: 'DELETE',
             headers: {
@@ -118,12 +119,12 @@ export const actionCreators = {
         dispatch({ type: CHANGE_TAB, tab: tab });
     },
     addSecurityTokens: (event) => async (dispatch, getState) => {
-        const response = await channelApiFunctions.addSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens);
+        await channelApiFunctions.addSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens, dispatch);
         event.setFinished();
         dispatch({ type: ADD_ACCESS_TOKEN });
     },
     removeSecurityTokens: (event) => async (dispatch, getState) => {
-        const response = await channelApiFunctions.removeSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens);
+        await channelApiFunctions.removeSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens, dispatch);
         event.setFinished();
         dispatch({ type: REMOVE_ACCESS_TOKEN });
     },

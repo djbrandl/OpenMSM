@@ -48,16 +48,16 @@ class FetchData extends Component {
 
                 <Nav tabs>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Get' })} onClick={() => { this.props.setActiveTab('Get'); }}>Get Channels</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Get' })} onClick={() => { this.props.setActiveTab('Get'); }} href='#'>Get Channels</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Create' })} onClick={() => { this.props.setActiveTab('Create') }}>Create Channel</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Create' })} onClick={() => { this.props.setActiveTab('Create') }} href='#'>Create Channel</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Add' })} onClick={() => { this.props.setActiveTab('Add') }}>Add Security Tokens</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Add' })} onClick={() => { this.props.setActiveTab('Add') }} href='#'>Add Security Tokens</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Remove' })} onClick={() => { this.props.setActiveTab('Remove') }}>Remove Security Tokens</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Remove' })} onClick={() => { this.props.setActiveTab('Remove') }} href='#'>Remove Security Tokens</NavLink>
                     </NavItem>
                 </Nav>
                 <TabContent activeTab={this.props.activeTab}>
