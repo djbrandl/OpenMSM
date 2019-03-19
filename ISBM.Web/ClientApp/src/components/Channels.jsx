@@ -59,6 +59,9 @@ class FetchData extends Component {
                     <NavItem>
                         <NavLink className={classnames({ active: this.props.activeTab === 'Remove' })} onClick={() => { this.props.setActiveTab('Remove') }} href='#'>Remove Security Tokens</NavLink>
                     </NavItem>
+                    <NavItem>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Delete' })} onClick={() => { this.props.setActiveTab('Delete') }} href='#'>Delete Channel</NavLink>
+                    </NavItem>
                 </Nav>
                 <TabContent activeTab={this.props.activeTab}>
                     <TabPane tabId="Get">
@@ -90,6 +93,14 @@ class FetchData extends Component {
                             <Col sm="12">
                                 <br />
                                 {renderRemoveTokens(this.props)}
+                            </Col>
+                        </Row>
+                    </TabPane>
+                    <TabPane tabId="Delete">
+                        <Row>
+                            <Col sm="12">
+                                <br />
+                                {renderDeleteChannel(this.props)}
                             </Col>
                         </Row>
                     </TabPane>
@@ -261,6 +272,36 @@ function renderRemoveTokens(props) {
     )
 }
 
+function renderDeleteChannel(props) {
+    return (
+        <Formik
+            initialValues={{ accessToken: '', channelUri: '' }}
+            onSubmit={(values, { setSubmitting, resetForm }) => {
+                props.deleteChannel({ data: values, setFinished: () => resetForm() });
+            }}>
+            {({ isSubmitting }) => (
+                <Form>
+
+                    <FormGroup row>
+                        <Label for="channelUri" sm={2}>URI</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" type="text" name="channelUri" />
+                            <ErrorMessage name="channelUri" component="div" />
+                        </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                        <Label for="accessToken" sm={2}>Access Token</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" type="password" name="accessToken" />
+                        </Col>
+                    </FormGroup>
+
+                    <Button type="submit" disabled={isSubmitting}>Submit</Button>
+                </Form>
+            )}
+        </Formik >
+    )
+}
 function renderGetChannels(props) {
     return (
         <Row>

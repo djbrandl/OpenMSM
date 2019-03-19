@@ -5,6 +5,7 @@ export const RECEIVE_CHANNELS = 'RECEIVE_CHANNELS'
 export const SET_ACCESS_TOKEN = 'SET_ACCESS_TOKEN'
 export const ADD_ACCESS_TOKEN = 'ADD_ACCESS_TOKEN'
 export const REMOVE_ACCESS_TOKEN = 'REMOVE_ACCESS_TOKEN'
+export const DELETE_CHANNEL = 'DELETE_CHANNEL'
 export const CREATE_CHANNELS_REQUEST = 'CREATE_CHANNELS_REQUEST'
 export const CREATE_CHANNELS_RECEIVE = 'CREATE_CHANNELS_RECEIVE'
 export const CHANGE_TAB = 'CHANGE_TAB'
@@ -96,6 +97,21 @@ const channelApiFunctions = {
             dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
         return response;
+    },
+    deleteChannel: async (channelUri, accessToken, dispatch) => {
+        const url = 'api/channels/' + encodeURIComponent(channelUri);
+        const options = {
+            method: 'DELETE',
+            headers: {
+                "Authorization": accessToken,
+                "Content-Type": "application/json"
+            }
+        };
+        const response = await fetch(url, options);
+        if (dispatch) {
+            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+        }
+        return response;
     }
 };
 
@@ -127,6 +143,11 @@ export const actionCreators = {
         await channelApiFunctions.removeSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens, dispatch);
         event.setFinished();
         dispatch({ type: REMOVE_ACCESS_TOKEN });
+    },
+    deleteChannel: (event) => async (dispatch, getState) => {
+        await channelApiFunctions.deleteChannel(event.data.channelUri, event.data.accessToken, dispatch);
+        event.setFinished();
+        dispatch({ type: DELETE_CHANNEL });
     },
     createChannel: (event) => async (dispatch, getState) => {
         dispatch({ type: CREATE_CHANNELS_REQUEST });
