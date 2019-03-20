@@ -8,6 +8,7 @@
     <SpaRoot>ClientApp\</SpaRoot>
     <DefaultItemExcludes>$(DefaultItemExcludes);$(SpaRoot)node_modules\**</DefaultItemExcludes>
     <LangVersion>latest</LangVersion>
+    <UserSecretsId>6d5a883d-485b-4c20-8153-377c8eb8947d</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

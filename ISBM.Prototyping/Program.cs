@@ -1,7 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -11,8 +13,28 @@ namespace ISBM.Prototyping
 {
     class Program
     {
-
         static async Task Main(string[] args)
+        {
+            var salt = Environment.GetEnvironmentVariable("salt", EnvironmentVariableTarget.Machine);
+            if (salt == null)
+            {
+                var saltBytes = new byte[128 / 8];
+                using (var rng = RandomNumberGenerator.Create())
+                {
+                    rng.GetBytes(saltBytes);
+                }
+                salt = Convert.ToBase64String(saltBytes);
+                Environment.SetEnvironmentVariable("salt", salt, EnvironmentVariableTarget.Machine);
+            }
+
+            Console.Write("Enter a password: ");
+            var password = Console.ReadLine();
+            var hashed = Convert.ToBase64String(KeyDerivation.Pbkdf2(password, Convert.FromBase64String(salt), KeyDerivationPrf.HMACSHA256, 10000, 256 / 8));
+            Console.WriteLine($"Hashed: {hashed}");
+            Console.ReadLine();
+        }
+
+        private static async Task SendHTTPPost()
         {
             var serviceProvider = new ServiceCollection().AddHttpClient().BuildServiceProvider();
             var factory = serviceProvider.GetService<IHttpClientFactory>();
@@ -21,7 +43,6 @@ namespace ISBM.Prototyping
             var response = await client.PostAsync("http://httpbin.org/post", new StringContent(obj, Encoding.UTF8, "application/json"));
             var responseText = await response.Content.ReadAsStringAsync();
             Console.WriteLine(responseText);
-            Console.ReadLine();
         }
 
         private const string XML_FILE_NAME = "Example.xml";

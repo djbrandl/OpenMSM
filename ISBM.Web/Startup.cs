@@ -10,7 +10,9 @@ using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
+using System;
+using System.Security;
+using System.Security.Cryptography;
 
 namespace ISBM.Web
 {
@@ -92,6 +94,22 @@ namespace ISBM.Web
                     spa.UseReactDevelopmentServer(npmScript: "start");
                 }
             });
+            ConfigureApplicationSalt();
+        }
+
+        public void ConfigureApplicationSalt()
+        {
+            var salt = Environment.GetEnvironmentVariable(ISBM.Web.Services.ServiceBase.TokenSaltEV, EnvironmentVariableTarget.Machine);
+            if (salt == null)
+            {
+                var saltBytes = new byte[128 / 8];
+                using (var rng = RandomNumberGenerator.Create())
+                {
+                    rng.GetBytes(saltBytes);
+                }
+                salt = Convert.ToBase64String(saltBytes);
+                Environment.SetEnvironmentVariable(ISBM.Web.Services.ServiceBase.TokenSaltEV, salt, EnvironmentVariableTarget.Machine);
+            }
         }
     }
 }

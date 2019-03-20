@@ -18,7 +18,7 @@ namespace ISBM.Web.Services
         #region Private Methods
         private void AssociateTokensToChannel(ISBM.Data.Models.Channel channel, IEnumerable<string> securityTokens)
         {
-            var tokens = securityTokens.Distinct();
+            var tokens = securityTokens.Distinct().Select(m => GetHashedToken(m));
             var existingSecurityTokens = appDbContext.Set<ISBM.Data.Models.SecurityToken>().Include(m => m.ChannelsSecurityTokens).ToList();
             var tokensToLink = existingSecurityTokens.Where(m => tokens.Contains(m.Token) && !m.ChannelsSecurityTokens.Any(v => v.ChannelId == channel.Id));
             var tokensToAdd = tokens.Where(m => !existingSecurityTokens.Select(v => v.Token).Contains(m));
@@ -127,7 +127,7 @@ namespace ISBM.Web.Services
         }
 
         public void RemoveSecurityTokens(string ChannelURI, [XmlElement("SecurityToken")] XmlElement[] SecurityToken)
-        {
+        { 
             if (string.IsNullOrWhiteSpace(ChannelURI))
             {
                 throw new ChannelFaultException("ChannelURI cannot be null or empty.", new ArgumentNullException("ChannelURI"));
@@ -147,7 +147,7 @@ namespace ISBM.Web.Services
                 return;
             }
             var existingAssignedTokens = channel.ChannelsSecurityTokens.Select(m => m.SecurityToken.Token);
-            var inputTokens = SecurityToken.Select(m => m.OuterXml);
+            var inputTokens = SecurityToken.Select(m => GetHashedToken(m.OuterXml));
             if (inputTokens.Count() != existingAssignedTokens.Intersect(inputTokens).Count())
             {
                 throw new SecurityTokenFaultException("One or more of the provided security tokens are not assigned to the channel.");

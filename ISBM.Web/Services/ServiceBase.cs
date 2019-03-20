@@ -2,6 +2,7 @@
 using ISBM.Data;
 using ISBM.Data.Models;
 using ISBM.ServiceDefinitions;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -15,19 +16,27 @@ namespace ISBM.Web.Services
 {
     public abstract class ServiceBase
     {
+        public static string TokenSaltEV = "ISBM_TOKEN_SALT";
         protected readonly IMapper mapper;
         protected readonly AppDbContext appDbContext;
         private string _accessToken { get; set; }
+        private string _tokenSalt { get; }
 
         public ServiceBase(AppDbContext dbContext, IMapper mapper)
         {
             this.mapper = mapper;
             this.appDbContext = dbContext;
+            _tokenSalt = Environment.GetEnvironmentVariable(TokenSaltEV, EnvironmentVariableTarget.Machine);
+        }
+
+        protected string GetHashedToken(string token)
+        {
+            return Convert.ToBase64String(KeyDerivation.Pbkdf2(token, Convert.FromBase64String(_tokenSalt), KeyDerivationPrf.HMACSHA256, 10000, 256 / 8));
         }
 
         public void SetAccessToken(string token)
         {
-            this._accessToken = token;
+            this._accessToken = GetHashedToken(token);
         }
 
         protected string GetAccessToken()
@@ -126,7 +135,6 @@ namespace ISBM.Web.Services
             }
         }
 
-
         protected XmlElement EvalateFilter(XmlElement messageContent, IList<ISBM.Data.Models.SessionNamespace> namespaces, string xPathExpression)
         {
             // If there is no filtering of message content
@@ -163,7 +171,5 @@ namespace ISBM.Web.Services
                     return null;
             }
         }
-
-
     }
 }
