@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
+using OpenMSM.Web.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace OpenMSM.Web.Controllers
 {
@@ -25,7 +27,15 @@ namespace OpenMSM.Web.Controllers
         private NotificationService _notificationService { get; set; }
         private AppDbContext _dbContext { get; set; }
 
-        public SessionsController(ProviderPublicationService providerPublicationService, ConsumerPublicationService consumerPublicationService, ProviderRequestService providerRequestService, ConsumerRequestService consumerRequestService, NotificationService notificationService, AppDbContext dbContext, IMapper mapper) : base(mapper)
+        public SessionsController(ProviderPublicationService providerPublicationService, 
+            ConsumerPublicationService consumerPublicationService, 
+            ProviderRequestService providerRequestService, 
+            ConsumerRequestService consumerRequestService, 
+            NotificationService notificationService, 
+            AppDbContext dbContext, 
+            IMapper mapper, 
+            IHubContext<AdminHub> hubContext, 
+            IHttpContextAccessor httpContextAccessor) : base(mapper, hubContext, httpContextAccessor)
         {
             this._dbContext = dbContext;
             this._providerPublicationService = providerPublicationService;

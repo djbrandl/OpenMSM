@@ -17,4 +17,21 @@ html {
   box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
 }
 
+.admin-message .json-body {
+    height: 200px;
+    overflow: scroll;
+}
 
+.admin-message-request {
+    border-right: 1px solid #CCC;
+}
+
+.admin-message h2 {
+    font-size: 1.25rem;
+}
+
+.admin-message h4 {
+    font-size: 1.1rem;
+    border-bottom: 1px solid #CCC;
+    padding-bottom: 10px;
+}

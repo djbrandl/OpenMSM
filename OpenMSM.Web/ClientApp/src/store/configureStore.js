@@ -2,10 +2,12 @@ import { applyMiddleware, combineReducers, compose, createStore } from 'redux';
 import thunk from 'redux-thunk';
 import { routerReducer, routerMiddleware } from 'react-router-redux';
 import * as Channels from './Channels';
+import * as Admin from './Admin';
 
 export default function configureStore(history, initialState) {
     const reducers = {
-        channels: Channels.reducer
+        channels: Channels.reducer,
+        admin: Admin.reducer
     };
 
     const middleware = [

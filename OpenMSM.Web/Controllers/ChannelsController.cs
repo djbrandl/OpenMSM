@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
 using AutoMapper;
-using OpenMSM.Data;
 using OpenMSM.ServiceDefinitions;
 using OpenMSM.Web.Models;
 using OpenMSM.Web.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
+using OpenMSM.Web.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace OpenMSM.Web.Controllers
 {
@@ -23,7 +23,14 @@ namespace OpenMSM.Web.Controllers
         private ProviderRequestService _providerRequestService { get; set; }
         private ConsumerRequestService _consumerRequestService { get; set; }
 
-        public ChannelsController(ChannelManagementService channelManagementService, ProviderPublicationService providerPublicationService, ConsumerPublicationService consumerPublicationService, ProviderRequestService providerRequestService, ConsumerRequestService consumerRequestService, IMapper mapper) : base(mapper)
+        public ChannelsController(ChannelManagementService channelManagementService, 
+            ProviderPublicationService providerPublicationService, 
+            ConsumerPublicationService consumerPublicationService, 
+            ProviderRequestService providerRequestService, 
+            ConsumerRequestService consumerRequestService, 
+            IMapper mapper, 
+            IHubContext<AdminHub> hubContext, 
+            IHttpContextAccessor httpContextAccessor) : base(mapper, hubContext, httpContextAccessor)
         {
             this._channelManagementService = channelManagementService;
             this._providerPublicationService = providerPublicationService;
@@ -36,6 +43,7 @@ namespace OpenMSM.Web.Controllers
             this.ServicesList.Add(_providerRequestService);
             this.ServicesList.Add(_consumerRequestService);
         }
+
         #region Private Methods
 
         private IActionResult HandleChannelFault(ChannelFaultException e)

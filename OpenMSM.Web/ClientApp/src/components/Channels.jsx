@@ -13,7 +13,6 @@ class FetchData extends Component {
     ensureDataFetched() {
         this.props.requestChannels();
     }
-
     render() {
         return (
             <div>
@@ -302,6 +301,7 @@ function renderDeleteChannel(props) {
         </Formik >
     )
 }
+
 function renderGetChannels(props) {
     return (
         <Row>
