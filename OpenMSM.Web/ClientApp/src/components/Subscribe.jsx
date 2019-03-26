@@ -82,7 +82,7 @@ class Subscribe extends Component {
 function renderOpenSession(props) {
     return (
         <Formik
-            initialValues={{ channelUri: '', session: { type: 'PublicationConsumer', listenerUrl: '', xPathExpression: '', topics: [], xPathNamespaces: [] } }}
+            initialValues={{ channelUri: '', session: { type: 'PublicationConsumer', listenerUrl: '', xPathExpression: '', topics: [''], xPathNamespaces: [] } }}
             validate={values => {
                 let errors = {};
                 if (!values.channelUri) {
@@ -96,7 +96,7 @@ function renderOpenSession(props) {
 
             {({ values, isSubmitting }) => (
                 <Form>
-                    <h2>Post a publication message</h2>
+                    <h2>Open a subscription session</h2>
                     <FormGroup row>
                         <Label for="channelUri" sm={2}>Channel URI</Label>
                         <Col sm={10}>
@@ -125,17 +125,14 @@ function renderOpenSession(props) {
                             <FormGroup row>
                                 <Label sm="2">Topics</Label>
                                 <Col sm="10">
-                                    {!values.session.topics || values.session.topics.length === 0 ?
-                                        <FormGroup row>
-                                            <Button onClick={() => arrayHelpers.push('')}>Add Topic</Button>
-                                        </FormGroup>
-                                        : ('')}
                                     {values.session.topics.map((topic, index) => (
                                         <FormGroup row key={index} >
                                             <InputGroup size="md">
                                                 <Field className='form-control' name={`session.topics[${index}]`} />
                                                 <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.push('')}>&nbsp;+&nbsp;</Button></InputGroupAddon>
-                                                <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
+                                                {index > 0 ?
+                                                    <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
+                                                    : ('')}
                                             </InputGroup>
                                         </FormGroup>
                                     ))}
@@ -196,7 +193,7 @@ function renderReadMessage(props) {
                 <Form>
                     <h2>Read a publication message</h2>
                     <FormGroup row>
-                        <Label for="sessionId" sm={2}>URI</Label>
+                        <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
                             <Field className="form-control" type="text" name="sessionId" />
                             <ErrorMessage name="sessionId" component="div" />

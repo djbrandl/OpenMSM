@@ -1,9 +1,11 @@
 ﻿export const ADD_HEADER_MESSAGE = 'ADD_HEADER_MESSAGE'
 export const CHANGE_HEADER_TAB = 'CHANGE_HEADER_TAB'
 export const SET_LAST_API_HEADER = 'SET_LAST_API_HEADER'
+export const TOGGLE_SLIDE_OUT = 'TOGGLE_SLIDE_OUT'
 
 const initialState = {
     activeHeaderTab: 'LastCall',
+    slideOut: false,
     lastApiCall: { url: '', details: {}, response: {} },
     messages: []
 };
@@ -11,6 +13,9 @@ const initialState = {
 export const actionCreators = {
     setActiveTab: (tab) => async (dispatch, getState) => {
         dispatch({ type: CHANGE_HEADER_TAB, tab: tab });
+    },
+    toggleSlideOut: (tab) => async (dispatch, getState) => {
+        dispatch({ type: TOGGLE_SLIDE_OUT });
     }
 };
 
@@ -24,6 +29,12 @@ export const reducer = (state, action) => {
         return {
             ...state,
             activeHeaderTab: action.tab
+        };
+    }
+    if (action.type === TOGGLE_SLIDE_OUT) {
+        return {
+            ...state,
+            slideOut: !state.slideOut
         };
     }
 

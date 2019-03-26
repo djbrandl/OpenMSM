@@ -140,7 +140,7 @@ export const actionCreators = {
         if (response.responseData.ok) {
             dispatch({
                 type: ADD_HEADER_MESSAGE,
-                message: "Session '" + event.form.sessionId + "': A publication message was created with ID '" + response.responseBody.id + "'"
+                message: "Session '" + event.form.sessionId + "': A publication message was created with ID " + response.responseBody.id + ""
             });
         } else {
             dispatch({
@@ -157,7 +157,7 @@ export const actionCreators = {
         dispatch({ type: EXPIRE_PUBLICATION_RESPONSE, message });
         dispatch({
             type: ADD_HEADER_MESSAGE,
-            message: "Session '" + event.form.sessionId + "': A publication message with ID '" + event.form.messageId + "' was expired"
+            message: "Session '" + event.form.sessionId + "': A publication message with ID " + event.form.messageId + " was expired"
         });
         event.setFinished();
     },

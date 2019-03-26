@@ -13,11 +13,6 @@ export const CHANGE_TAB = 'CHANGE_TAB'
 const initialState = {
     accessToken: '',
     activeTab: 'Open'
-    //headerLogging: {
-    //    activeHeaderTab: 'LastCall',
-    //    lastApiCall: { url: '', details: {}, response: {} },
-    //    messages: []
-    //}
 };
 
 const buildResponse = (response) => {
@@ -58,7 +53,7 @@ const subscribeApiFunctions = {
         }
     },
     readPublication: async (sessionId, accessToken, dispatch) => {
-        const url = 'api/sessions/' + encodeURIComponent(sessionId) + '/publications';
+        const url = 'api/sessions/' + encodeURIComponent(sessionId) + '/publication';
         const options = {
             method: 'GET',
             headers: {
@@ -66,17 +61,23 @@ const subscribeApiFunctions = {
                 "Content-Type": "application/json"
             }
         };
-        const response = await fetch(url, options);
-        const returnMessage = await response.json();
-        if (dispatch) {
-            let builtResponse = buildResponse(response);
-            builtResponse.body = returnMessage;
-            dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: builtResponse });
+        try {
+            const response = await fetch(url, options);
+            console.log(response);
+            const returnMessage = await response.json();
+            console.log(returnMessage);
+            if (dispatch) {
+                let builtResponse = buildResponse(response);
+                builtResponse.body = returnMessage;
+                dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: builtResponse });
+            }
+            return { responseData: response, responseBody: returnMessage };
+        } catch (e) {
+            console.log(e);
         }
-        return { responseData: response, responseBody: returnMessage };
     },
     removePublication: async (sessionId, accessToken, dispatch) => {
-        const url = 'api/sessions/' + encodeURIComponent(sessionId) + '/publications';
+        const url = 'api/sessions/' + encodeURIComponent(sessionId) + '/publication';
         const options = {
             method: 'DELETE',
             headers: {
@@ -122,14 +123,14 @@ export const actionCreators = {
     },
     openSession: (event) => async (dispatch, getState) => {
         dispatch({ type: OPEN_SESSION_REQUEST });
-        const accessToken = getState().publish.accessToken;
+        const accessToken = getState().subscribe.accessToken;
         const channelUri = event.form.channelUri;
         const response = await subscribeApiFunctions.openSubscriptionSession(channelUri, event.form.session, accessToken, dispatch);
         dispatch({ type: OPEN_SESSION_RESPONSE, response, channelUri });
         if (response.responseData.ok) {
             dispatch({
                 type: ADD_HEADER_MESSAGE,
-                message: "Channel '" + channelUri + "': A subscription session was opened with ID '" + response.responseBody.id + "'"
+                message: "Channel '" + channelUri + "': A subscription session was opened with ID " + response.responseBody.id + ""
             });
         } else {
             dispatch({
@@ -140,10 +141,11 @@ export const actionCreators = {
         event.setFinished();
     },
     readPublication: (event) => async (dispatch, getState) => {
-        dispatch({ type: READ_PUBLICATION_REQUEST });
-        const accessToken = getState().publish.accessToken;
+        //dispatch({ type: READ_PUBLICATION_REQUEST });
+        const sub = getState().subscribe;
+        const accessToken = sub.accessToken;
         const response = await subscribeApiFunctions.readPublication(event.form.sessionId, accessToken, dispatch);
-        dispatch({ type: READ_PUBLICATION_REQUEST, response });
+        dispatch({ type: READ_PUBLICATION_RESPONSE, response });
         if (response.responseData.ok) {
             dispatch({
                 type: ADD_HEADER_MESSAGE,
@@ -159,7 +161,7 @@ export const actionCreators = {
     },
     removePublication: (event) => async (dispatch, getState) => {
         dispatch({ type: REMOVE_PUBLICATION_REQUEST });
-        const accessToken = getState().publish.accessToken;
+        const accessToken = getState().subscribe.accessToken;
         const message = await subscribeApiFunctions.removePublication(event.form.sessionId, accessToken, dispatch);
         dispatch({ type: REMOVE_PUBLICATION_RESPONSE, message });
         dispatch({
@@ -170,7 +172,7 @@ export const actionCreators = {
     },
     closeSession: (event) => async (dispatch, getState) => {
         dispatch({ type: CLOSE_SUBSCRIPTION_SESSION_REQUEST });
-        const accessToken = getState().publish.accessToken;
+        const accessToken = getState().subscribe.accessToken;
         const message = await subscribeApiFunctions.closeSession(event.form.sessionId, accessToken, dispatch);
         dispatch({ type: CLOSE_SUBSCRIPTION_SESSION_RESPONSE, message });
         dispatch({

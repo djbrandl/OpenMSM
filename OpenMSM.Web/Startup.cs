@@ -68,6 +68,7 @@ namespace OpenMSM.Web
             });
 
             services.AddSignalR();
+            services.AddCors();
 
             services.AddLogging(loggingBuilder => {
                 loggingBuilder.AddConfiguration(Configuration.GetSection("Logging"));
@@ -96,7 +97,7 @@ namespace OpenMSM.Web
             app.UseSpaStaticFiles();
             app.UseRequestResponseLogging();
             app.UseMvc();
-
+            
             app.UseSignalR(routes => {
                 routes.MapHub<OpenMSM.Web.Hubs.AdminHub>("/admin/hub");
             });

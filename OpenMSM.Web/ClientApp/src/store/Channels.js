@@ -1,5 +1,4 @@
-﻿//import { reset } from 'redux-form';
-
+﻿import { SET_LAST_API_HEADER, ADD_HEADER_MESSAGE } from './HeaderLogging'
 export const REQUEST_CHANNELS = 'REQUEST_CHANNELS'
 export const RECEIVE_CHANNELS = 'RECEIVE_CHANNELS'
 export const SET_ACCESS_TOKEN = 'SET_ACCESS_TOKEN'
@@ -42,7 +41,7 @@ const channelApiFunctions = {
             const response = await fetch(url, options);
             const channels = await response.json();
             if (dispatch) {
-                dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+                dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
             }
             return channels;
         }
@@ -61,7 +60,7 @@ const channelApiFunctions = {
         };
         const response = await fetch(url, options);
         if (dispatch) {
-            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+            dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
         return response;
     },
@@ -78,7 +77,7 @@ const channelApiFunctions = {
         };
         const response = await fetch(url, options);
         if (dispatch) {
-            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+            dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
         return response;
     },
@@ -94,7 +93,7 @@ const channelApiFunctions = {
         };
         const response = await fetch(url, options);
         if (dispatch) {
-            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+            dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
         return response;
     },
@@ -109,7 +108,7 @@ const channelApiFunctions = {
         };
         const response = await fetch(url, options);
         if (dispatch) {
-            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+            dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
         return response;
     }
@@ -136,16 +135,25 @@ export const actionCreators = {
     },
     addSecurityTokens: (event) => async (dispatch, getState) => {
         await channelApiFunctions.addSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens, dispatch);
+        dispatch({
+            type: ADD_HEADER_MESSAGE, message: "Channel '" + event.data.channelUri + "': Added " + event.data.securityTokens.length + " security tokens to channel."
+        });
         event.setFinished();
         dispatch({ type: ADD_ACCESS_TOKEN });
     },
     removeSecurityTokens: (event) => async (dispatch, getState) => {
         await channelApiFunctions.removeSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens, dispatch);
+        dispatch({
+            type: ADD_HEADER_MESSAGE, message: "Channel '" + event.data.channelUri + "': Removed security tokens from channel."
+        });
         event.setFinished();
         dispatch({ type: REMOVE_ACCESS_TOKEN });
     },
     deleteChannel: (event) => async (dispatch, getState) => {
         await channelApiFunctions.deleteChannel(event.data.channelUri, event.data.accessToken, dispatch);
+        dispatch({
+            type: ADD_HEADER_MESSAGE, message: "Channel '" + event.data.channelUri + "': Deleted channel."
+        });
         event.setFinished();
         dispatch({ type: DELETE_CHANNEL });
     },
@@ -155,6 +163,9 @@ export const actionCreators = {
         values.securityTokens.push({ token: values.token });
         delete values.token;
         await channelApiFunctions.createChannel(values, dispatch);
+        dispatch({
+            type: ADD_HEADER_MESSAGE, message: "Channel '" + values.uri + "': Created channel."
+        });
         event.setFinished();
         dispatch({ type: CREATE_CHANNELS_RECEIVE });
     },

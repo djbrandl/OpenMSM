@@ -114,7 +114,7 @@ function renderOpenSession(props) {
 function renderPostMessage(props) {
     return (
         <Formik
-            initialValues={{ sessionId: '', message: { type: 'Publication', content: '', duration: '', topics: [] } }}
+            initialValues={{ sessionId: '', message: { type: 'Publication', content: '', duration: '', topics: [''] } }}
             validate={values => {
                 let errors = {};
                 if (!values.sessionId) {
@@ -154,23 +154,23 @@ function renderPostMessage(props) {
                     <FieldArray
                         name="message.topics"
                         render={arrayHelpers => (
-                            <div>
-                                {!values.message.topics || values.message.topics.length === 0 ?
-                                    <FormGroup row>
-                                        <Button onClick={() => arrayHelpers.push('')}>Add Topic</Button>
-                                    </FormGroup>
-                                    : ('')}
-                                {values.message.topics.map((topic, index) => (
-                                    <FormGroup row key={index} >
-                                        <InputGroup size="lg">
-                                            <Field className='form-control' name={`message.topics[${index}]`} />
-                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.push('')}>&nbsp;+&nbsp;</Button></InputGroupAddon>
-                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
-                                        </InputGroup>
-                                    </FormGroup>
-                                ))}
-                            </div>
-                        )} />
+                            <FormGroup row>
+                                <Label sm="2">Topics</Label>
+                                <Col sm="10">
+                                    {values.message.topics.map((topic, index) => (
+                                        <FormGroup row key={index} >
+                                            <InputGroup size="md">
+                                                <Field className='form-control' name={`message.topics[${index}]`} />
+                                                <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.push('')}>&nbsp;+&nbsp;</Button></InputGroupAddon>
+                                                {index > 0 ?
+                                                    <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
+                                                    : ('')}
+                                            </InputGroup>
+                                        </FormGroup>
+                                    ))}
+                                </Col>
+                            </FormGroup>
+                        )} />                   
                     <Button type="submit" disabled={isSubmitting}>Submit</Button>
                 </Form>
             )}

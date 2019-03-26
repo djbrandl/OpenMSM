@@ -208,6 +208,10 @@ namespace OpenMSM.Web.Controllers
             {
                 return BadRequest(new { message = "Malformed session object in HTTP body." });
             }
+            if (!session.Topics.Any())
+            {
+                return UnprocessableEntity(new { message = "There must be at least 1 topic for a session." });
+            }
             if (session.XPathNamespaces == null)
             {
                 session.XPathNamespaces = new XPathNamespace[0];

@@ -5,6 +5,7 @@ import { actionCreators } from '../store/Channels';
 import { Jumbotron, Collapse, Card, CardTitle, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, FormGroup, FormText, Label, Input, Button, InputGroup, InputGroupAddon } from 'reactstrap';
 import { Formik, Form, Field, FieldArray, ErrorMessage } from 'formik';
 import classnames from 'classnames';
+import HeaderLogging from './HeaderLogging';
 
 class Channel extends Component {
     componentDidMount() {
@@ -16,6 +17,7 @@ class Channel extends Component {
     render() {
         return (
             <div>
+                <HeaderLogging />
                 <Jumbotron>
                     <h1 className="display-3">Channels</h1>
                     <p className="lead">This component demonstrates Channel management functionality of the REST API.</p>
