@@ -1,11 +1,14 @@
-﻿import { SET_LAST_API_HEADER, ADD_HEADER_MESSAGE } from './HeaderLoggingOld'
+﻿import { SET_LAST_API_HEADER, ADD_HEADER_MESSAGE } from './HeaderLogging'
 export const OPEN_SESSION_REQUEST = 'OPEN_SESSION_REQUEST'
-export const OPEN_SESSION_RECEIVE = 'OPEN_SESSION_RECEIVE'
+export const OPEN_SESSION_RESPONSE = 'OPEN_SESSION_RESPONSE'
+export const POST_PUBLICATION_REQUEST = 'POST_PUBLICATION_REQUEST'
+export const POST_PUBLICATION_RESPONSE = 'POST_PUBLICATION_RESPONSE'
+export const EXPIRE_PUBLICATION_REQUEST = 'EXPIRE_PUBLICATION_REQUEST'
+export const EXPIRE_PUBLICATION_RESPONSE = 'EXPIRE_PUBLICATION_RESPONSE'
 export const RECEIVE_CHANNELS = 'RECEIVE_CHANNELS'
 export const SET_ACCESS_TOKEN = 'SET_ACCESS_TOKEN'
-export const DELETE_CHANNEL = 'DELETE_CHANNEL'
-export const CREATE_CHANNELS_REQUEST = 'CREATE_CHANNELS_REQUEST'
-export const CREATE_CHANNELS_RECEIVE = 'CREATE_CHANNELS_RECEIVE'
+export const CLOSE_SESSION_REQUEST = 'CLOSE_SESSION_REQUEST'
+export const CLOSE_SESSION_RESPONSE = 'CLOSE_SESSION_RESPONSE'
 export const CHANGE_TAB = 'CHANGE_TAB'
 
 const initialState = {
@@ -55,7 +58,7 @@ const publishApiFunctions = {
         }
     },
     postPublication: async (sessionId, message, accessToken, dispatch) => {
-        const url = 'api/session/' + encodeURIComponent(sessionId) + '/publications';
+        const url = 'api/sessions/' + encodeURIComponent(sessionId) + '/publications';
         const options = {
             method: 'POST',
             headers: {
@@ -71,10 +74,10 @@ const publishApiFunctions = {
             builtResponse.body = returnMessage;
             dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: builtResponse });
         }
-        return returnMessage;
+        return { responseData: response, responseBody: returnMessage };
     },
     expirePublication: async (sessionId, messageId, accessToken, dispatch) => {
-        const url = 'api/session/' + encodeURIComponent(sessionId) + '/publications/' + encodeURIComponent(messageId);
+        const url = 'api/sessions/' + encodeURIComponent(sessionId) + '/publications/' + encodeURIComponent(messageId);
         const options = {
             method: 'POST',
             headers: {
@@ -89,7 +92,7 @@ const publishApiFunctions = {
         return response;
     },
     closeSession: async (sessionId, accessToken, dispatch) => {
-        const url = 'api/session/' + encodeURIComponent(sessionId);
+        const url = 'api/sessions/' + encodeURIComponent(sessionId);
         const options = {
             method: 'DELETE',
             headers: {
@@ -121,12 +124,52 @@ export const actionCreators = {
     openSession: (event) => async (dispatch, getState) => {
         dispatch({ type: OPEN_SESSION_REQUEST });
         const accessToken = getState().publish.accessToken;
-        const channelUri = event.data.channelUri;
+        const channelUri = event.form.channelUri;
         const publicationSession = await publishApiFunctions.openPublicationSession(channelUri, accessToken, dispatch);
-        dispatch({ type: OPEN_SESSION_RECEIVE, publicationSession, channelUri });
+        dispatch({ type: OPEN_SESSION_RESPONSE, publicationSession, channelUri });
         dispatch({
             type: ADD_HEADER_MESSAGE,
             message: "Channel '" + channelUri + "': A publication session was opened with ID '" + publicationSession.id + "'"
+        });
+        event.setFinished();
+    },
+    postPublication: (event) => async (dispatch, getState) => {
+        dispatch({ type: POST_PUBLICATION_REQUEST });
+        const accessToken = getState().publish.accessToken;
+        const response = await publishApiFunctions.postPublication(event.form.sessionId, event.form.message, accessToken, dispatch);
+        dispatch({ type: POST_PUBLICATION_RESPONSE, response });
+        if (response.responseData.ok) {
+            dispatch({
+                type: ADD_HEADER_MESSAGE,
+                message: "Session '" + event.form.sessionId + "': A publication message was created with ID '" + response.responseBody.id + "'"
+            });
+        } else {
+            dispatch({
+                type: ADD_HEADER_MESSAGE,
+                message: "FAILURE - Session '" + event.form.sessionId + "': " + response.responseBody.message
+            });
+        }
+        event.setFinished();
+    },
+    expirePublication: (event) => async (dispatch, getState) => {
+        dispatch({ type: EXPIRE_PUBLICATION_REQUEST });
+        const accessToken = getState().publish.accessToken;
+        const message = await publishApiFunctions.expirePublication(event.form.sessionId, event.form.messageId, accessToken, dispatch);
+        dispatch({ type: EXPIRE_PUBLICATION_RESPONSE, message });
+        dispatch({
+            type: ADD_HEADER_MESSAGE,
+            message: "Session '" + event.form.sessionId + "': A publication message with ID '" + event.form.messageId + "' was expired"
+        });
+        event.setFinished();
+    },
+    closeSession: (event) => async (dispatch, getState) => {
+        dispatch({ type: CLOSE_SESSION_REQUEST });
+        const accessToken = getState().publish.accessToken;
+        const message = await publishApiFunctions.closeSession(event.form.sessionId, accessToken, dispatch);
+        dispatch({ type: CLOSE_SESSION_RESPONSE, message });
+        dispatch({
+            type: ADD_HEADER_MESSAGE,
+            message: "Session '" + event.form.sessionId + "': Session was closed."
         });
         event.setFinished();
     },
@@ -144,7 +187,6 @@ export const actionCreators = {
     //    event.setFinished();
     //    dispatch({ type: CREATE_CHANNELS_RECEIVE });
     //}
-
 };
 
 // reducers update state
@@ -167,22 +209,8 @@ export const reducer = (state, action) => {
         };
     }
 
-    if (action.type === OPEN_SESSION_RECEIVE) {
+    if (action.type === OPEN_SESSION_RESPONSE) {
         return { ...state };
-    }
-
-    if (action.type === CREATE_CHANNELS_REQUEST) {
-        return {
-            ...state,
-            isLoading: true
-        };
-    }
-
-    if (action.type === CREATE_CHANNELS_RECEIVE) {
-        return {
-            ...state,
-            isLoading: false
-        };
     }
 
     if (action.type === CHANGE_TAB) {

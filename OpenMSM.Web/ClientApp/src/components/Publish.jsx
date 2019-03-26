@@ -2,8 +2,8 @@
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { actionCreators } from '../store/Publish';
-import { Jumbotron, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, FormGroup, FormText, Label, Input, Button } from 'reactstrap';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
+import { Jumbotron, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, FormGroup, FormText, Label, Input, Button, InputGroup, InputGroupAddon } from 'reactstrap';
+import { Formik, Form, Field, FieldArray, ErrorMessage } from 'formik';
 import classnames from 'classnames';
 import HeaderLogging from './HeaderLogging';
 
@@ -91,7 +91,7 @@ function renderOpenSession(props) {
                 return errors;
             }}
             onSubmit={(values, { resetForm }) => {
-                props.openSession({ data: values, setFinished: () => resetForm() });
+                props.openSession({ form: values, setFinished: () => resetForm() });
             }}>
 
             {({ isSubmitting }) => (
@@ -114,52 +114,63 @@ function renderOpenSession(props) {
 function renderPostMessage(props) {
     return (
         <Formik
-            initialValues={{ uri: '', type: 'Publication', description: '', token: '' }}
+            initialValues={{ sessionId: '', message: { type: 'Publication', content: '', duration: '', topics: [] } }}
             validate={values => {
                 let errors = {};
-                if (!values.uri) {
-                    errors.uri = 'Required';
+                if (!values.sessionId) {
+                    errors.sessionId = 'Required';
                 }
                 return errors;
             }}
-            onSubmit={(values, { setSubmitting, resetForm }) => {
-                props.createChannel({ data: values, setFinished: () => resetForm() });
+            onSubmit={(values, { resetForm }) => {
+                props.postPublication({ form: values, setFinished: () => resetForm() });
             }}>
 
-            {({ isSubmitting }) => (
+            {({ values, isSubmitting }) => (
                 <Form>
-                    <h2>Create a new channel</h2>
+                    <h2>Post a publication message</h2>
                     <FormGroup row>
-                        <Label for="uri" sm={2}>URI</Label>
+                        <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
-                            <Field className="form-control" type="text" name="uri" />
-                            <ErrorMessage name="uri" component="div" />
+                            <Field className="form-control" type="text" name="sessionId" />
+                            <ErrorMessage name="sessionId" component="div" />
                         </Col>
                     </FormGroup>
                     <FormGroup row>
-                        <Label for="channelType" sm={2}>Type</Label>
+                        <Label for="message.content" sm={2}>Content</Label>
                         <Col sm={10}>
-                            <Field component="select" className="form-control" name="type">
-                                <option>Publication</option>
-                                <option>Request</option>
-                            </Field>
+                            <Field className="form-control" component="textarea" name="message.content" />
                         </Col>
                     </FormGroup>
                     <FormGroup row>
-                        <Label for="description" sm={2}>Description</Label>
+                        <Label for="message.duration" sm={2}>Duration</Label>
                         <Col sm={10}>
-                            <Field className="form-control" component="textarea" name="description" />
-                        </Col>
-                    </FormGroup>
-                    <FormGroup row>
-                        <Label for="token" sm={2}>Security Token</Label>
-                        <Col sm={10}>
-                            <Field className="form-control" type="password" name="token" />
+                            <Field className="form-control" type="text" name="message.duration" />
                             <FormText color="muted">
-                                Current front-end implementation of this demonstration only allows for the user to enter just 1 security token when creating a channel. The underlying API driving the behavior <strong>does</strong> allow for multiple security tokens to be assigned to the channel on creation.
+                                Current implementation requires a valid XML xsd:duration string.
                             </FormText>
                         </Col>
                     </FormGroup>
+                    <FieldArray
+                        name="message.topics"
+                        render={arrayHelpers => (
+                            <div>
+                                {!values.message.topics || values.message.topics.length === 0 ?
+                                    <FormGroup row>
+                                        <Button onClick={() => arrayHelpers.push('')}>Add Topic</Button>
+                                    </FormGroup>
+                                    : ('')}
+                                {values.message.topics.map((topic, index) => (
+                                    <FormGroup row key={index} >
+                                        <InputGroup size="lg">
+                                            <Field className='form-control' name={`message.topics[${index}]`} />
+                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.push('')}>&nbsp;+&nbsp;</Button></InputGroupAddon>
+                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
+                                        </InputGroup>
+                                    </FormGroup>
+                                ))}
+                            </div>
+                        )} />
                     <Button type="submit" disabled={isSubmitting}>Submit</Button>
                 </Form>
             )}
@@ -170,50 +181,36 @@ function renderPostMessage(props) {
 function renderExpireMessage(props) {
     return (
         <Formik
-            initialValues={{ uri: '', type: 'Publication', description: '', token: '' }}
+            initialValues={{ sessionId: '', messageId: '' }}
             validate={values => {
                 let errors = {};
-                if (!values.uri) {
-                    errors.uri = 'Required';
+                if (!values.sessionId) {
+                    errors.sessionId = 'Required';
+                }
+                if (!values.messageId) {
+                    errors.messageId = 'Required';
                 }
                 return errors;
             }}
-            onSubmit={(values, { setSubmitting, resetForm }) => {
-                props.createChannel({ data: values, setFinished: () => resetForm() });
+            onSubmit={(values, { resetForm }) => {
+                props.expirePublication({ form: values, setFinished: () => resetForm() });
             }}>
 
             {({ isSubmitting }) => (
                 <Form>
-                    <h2>Create a new channel</h2>
+                    <h2>Expire a publication message</h2>
                     <FormGroup row>
-                        <Label for="uri" sm={2}>URI</Label>
+                        <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
-                            <Field className="form-control" type="text" name="uri" />
-                            <ErrorMessage name="uri" component="div" />
+                            <Field className="form-control" type="text" name="sessionId" />
+                            <ErrorMessage name="sessionId" component="div" />
                         </Col>
                     </FormGroup>
                     <FormGroup row>
-                        <Label for="channelType" sm={2}>Type</Label>
+                        <Label for="messageId" sm={2}>Message ID</Label>
                         <Col sm={10}>
-                            <Field component="select" className="form-control" name="type">
-                                <option>Publication</option>
-                                <option>Request</option>
-                            </Field>
-                        </Col>
-                    </FormGroup>
-                    <FormGroup row>
-                        <Label for="description" sm={2}>Description</Label>
-                        <Col sm={10}>
-                            <Field className="form-control" component="textarea" name="description" />
-                        </Col>
-                    </FormGroup>
-                    <FormGroup row>
-                        <Label for="token" sm={2}>Security Token</Label>
-                        <Col sm={10}>
-                            <Field className="form-control" type="password" name="token" />
-                            <FormText color="muted">
-                                Current front-end implementation of this demonstration only allows for the user to enter just 1 security token when creating a channel. The underlying API driving the behavior <strong>does</strong> allow for multiple security tokens to be assigned to the channel on creation.
-                            </FormText>
+                            <Field className="form-control" type="text" name="messageId" />
+                            <ErrorMessage name="messageId" component="div" />
                         </Col>
                     </FormGroup>
                     <Button type="submit" disabled={isSubmitting}>Submit</Button>
@@ -226,50 +223,26 @@ function renderExpireMessage(props) {
 function renderCloseSession(props) {
     return (
         <Formik
-            initialValues={{ uri: '', type: 'Publication', description: '', token: '' }}
+            initialValues={{ sessionId: '' }}
             validate={values => {
                 let errors = {};
-                if (!values.uri) {
-                    errors.uri = 'Required';
+                if (!values.sessionId) {
+                    errors.sessionId = 'Required';
                 }
                 return errors;
             }}
-            onSubmit={(values, { setSubmitting, resetForm }) => {
-                props.createChannel({ data: values, setFinished: () => resetForm() });
+            onSubmit={(values, { resetForm }) => {
+                props.closeSession({ form: values, setFinished: () => resetForm() });
             }}>
 
             {({ isSubmitting }) => (
                 <Form>
-                    <h2>Create a new channel</h2>
+                    <h2>Close a publication session</h2>
                     <FormGroup row>
-                        <Label for="uri" sm={2}>URI</Label>
+                        <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
-                            <Field className="form-control" type="text" name="uri" />
-                            <ErrorMessage name="uri" component="div" />
-                        </Col>
-                    </FormGroup>
-                    <FormGroup row>
-                        <Label for="channelType" sm={2}>Type</Label>
-                        <Col sm={10}>
-                            <Field component="select" className="form-control" name="type">
-                                <option>Publication</option>
-                                <option>Request</option>
-                            </Field>
-                        </Col>
-                    </FormGroup>
-                    <FormGroup row>
-                        <Label for="description" sm={2}>Description</Label>
-                        <Col sm={10}>
-                            <Field className="form-control" component="textarea" name="description" />
-                        </Col>
-                    </FormGroup>
-                    <FormGroup row>
-                        <Label for="token" sm={2}>Security Token</Label>
-                        <Col sm={10}>
-                            <Field className="form-control" type="password" name="token" />
-                            <FormText color="muted">
-                                Current front-end implementation of this demonstration only allows for the user to enter just 1 security token when creating a channel. The underlying API driving the behavior <strong>does</strong> allow for multiple security tokens to be assigned to the channel on creation.
-                            </FormText>
+                            <Field className="form-control" type="text" name="sessionId" />
+                            <ErrorMessage name="sessionId" component="div" />
                         </Col>
                     </FormGroup>
                     <Button type="submit" disabled={isSubmitting}>Submit</Button>
