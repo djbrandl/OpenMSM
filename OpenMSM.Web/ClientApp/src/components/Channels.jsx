@@ -6,7 +6,7 @@ import { Jumbotron, Collapse, Card, CardTitle, TabContent, TabPane, Nav, NavItem
 import { Formik, Form, Field, FieldArray, ErrorMessage } from 'formik';
 import classnames from 'classnames';
 
-class FetchData extends Component {
+class Channel extends Component {
     componentDidMount() {
         this.ensureDataFetched();
     }
@@ -18,7 +18,7 @@ class FetchData extends Component {
             <div>
                 <Jumbotron>
                     <h1 className="display-3">Channels</h1>
-                    <p className="lead">This component demonstrates functionality of the Channel REST API.</p>
+                    <p className="lead">This component demonstrates Channel management functionality of the REST API.</p>
                     <hr className="my-2" />
                     <p>To see the details of the web calls performed, click the button below to show/hide the API call details.</p>
                     <Button onClick={this.props.toggleApi}>Toggle API details</Button>
@@ -341,4 +341,4 @@ function renderGetChannels(props) {
 export default connect(
     state => state.channels,
     dispatch => bindActionCreators(actionCreators, dispatch)
-)(FetchData);
+)(Channel);

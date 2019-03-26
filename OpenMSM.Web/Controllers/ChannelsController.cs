@@ -63,7 +63,7 @@ namespace OpenMSM.Web.Controllers
 
                 // Sending the link to the route for "CloseSession", but that requires a DELETE action to be taken.
                 // This is set for semantic purposes for the "Location" header that is returned.
-                return Created(new Uri(Url.Link("CloseSession", new { session.Id })), session);
+                return Created(new Uri(Url.Link("CloseSession", new { sessionId = session.Id })), session);
             }
             catch (ChannelFaultException e)
             {

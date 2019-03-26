@@ -17,6 +17,14 @@ html {
   box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
 }
 
+.admin-message {
+    margin-bottom: 10px;
+}
+
+.admin-message .card-header {
+    cursor: pointer;
+}
+
 .admin-message .json-body {
     height: 200px;
     overflow: scroll;
