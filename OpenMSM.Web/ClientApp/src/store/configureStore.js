@@ -5,13 +5,15 @@ import * as Channels from './Channels';
 import * as Admin from './Admin';
 import * as Publish from './Publish';
 import * as HeaderLogging from './HeaderLogging';
+import * as Subscribe from './Subscribe';
 
 export default function configureStore(history, initialState) {
     const reducers = {
         channels: Channels.reducer,
         admin: Admin.reducer,
         publish: Publish.reducer,
-        headerLogging: HeaderLogging.reducer
+        headerLogging: HeaderLogging.reducer,
+        subscribe: Subscribe.reducer
     };
 
     const middleware = [

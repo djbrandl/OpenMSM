@@ -1,13 +1,13 @@
 ﻿import { SET_LAST_API_HEADER, ADD_HEADER_MESSAGE } from './HeaderLogging'
 export const OPEN_SESSION_REQUEST = 'OPEN_SESSION_REQUEST'
 export const OPEN_SESSION_RESPONSE = 'OPEN_SESSION_RESPONSE'
-export const POST_PUBLICATION_REQUEST = 'POST_PUBLICATION_REQUEST'
-export const POST_PUBLICATION_RESPONSE = 'POST_PUBLICATION_RESPONSE'
-export const EXPIRE_PUBLICATION_REQUEST = 'EXPIRE_PUBLICATION_REQUEST'
-export const EXPIRE_PUBLICATION_RESPONSE = 'EXPIRE_PUBLICATION_RESPONSE'
+export const READ_PUBLICATION_REQUEST = 'READ_PUBLICATION_REQUEST'
+export const READ_PUBLICATION_RESPONSE = 'READ_PUBLICATION_RESPONSE'
+export const REMOVE_PUBLICATION_REQUEST = 'REMOVE_PUBLICATION_REQUEST'
+export const REMOVE_PUBLICATION_RESPONSE = 'REMOVE_PUBLICATION_RESPONSE'
+export const CLOSE_SUBSCRIPTION_SESSION_REQUEST = 'CLOSE_SUBSCRIPTION_SESSION_REQUEST'
+export const CLOSE_SUBSCRIPTION_SESSION_RESPONSE = 'CLOSE_SUBSCRIPTION_SESSION_RESPONSE'
 export const SET_ACCESS_TOKEN = 'SET_ACCESS_TOKEN'
-export const CLOSE_PUBLICATION_SESSION_REQUEST = 'CLOSE_PUBLICATION_SESSION_REQUEST'
-export const CLOSE_PUBLICATIONSESSION_RESPONSE = 'CLOSE_PUBLICATIONSESSION_RESPONSE'
 export const CHANGE_TAB = 'CHANGE_TAB'
 
 const initialState = {
@@ -32,15 +32,16 @@ const buildResponse = (response) => {
     };
 };
 
-const publishApiFunctions = {
-    openPublicationSession: async (channelUri, accessToken, dispatch) => {
-        const url = 'api/channels/' + encodeURIComponent(channelUri) + '/publication-sessions';
+const subscribeApiFunctions = {
+    openSubscriptionSession: async (channelUri, session, accessToken, dispatch) => {
+        const url = 'api/channels/' + encodeURIComponent(channelUri) + '/subscription-sessions';
         const options = {
             method: 'POST',
             headers: {
                 "Authorization": accessToken,
                 "Content-Type": "application/json"
-            }
+            },
+            body: JSON.stringify(session)
         };
         try {
             const response = await fetch(url, options);
@@ -50,21 +51,20 @@ const publishApiFunctions = {
                 builtResponse.body = session;
                 dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: builtResponse });
             }
-            return session;
+            return { responseData: response, responseBody: session };
         }
         catch (e) {
 
         }
     },
-    postPublication: async (sessionId, message, accessToken, dispatch) => {
+    readPublication: async (sessionId, accessToken, dispatch) => {
         const url = 'api/sessions/' + encodeURIComponent(sessionId) + '/publications';
         const options = {
-            method: 'POST',
+            method: 'GET',
             headers: {
                 "Authorization": accessToken,
                 "Content-Type": "application/json"
-            },
-            body: JSON.stringify(message)
+            }
         };
         const response = await fetch(url, options);
         const returnMessage = await response.json();
@@ -75,10 +75,10 @@ const publishApiFunctions = {
         }
         return { responseData: response, responseBody: returnMessage };
     },
-    expirePublication: async (sessionId, messageId, accessToken, dispatch) => {
-        const url = 'api/sessions/' + encodeURIComponent(sessionId) + '/publications/' + encodeURIComponent(messageId);
+    removePublication: async (sessionId, accessToken, dispatch) => {
+        const url = 'api/sessions/' + encodeURIComponent(sessionId) + '/publications';
         const options = {
-            method: 'POST',
+            method: 'DELETE',
             headers: {
                 "Authorization": accessToken,
                 "Content-Type": "application/json"
@@ -124,23 +124,30 @@ export const actionCreators = {
         dispatch({ type: OPEN_SESSION_REQUEST });
         const accessToken = getState().publish.accessToken;
         const channelUri = event.form.channelUri;
-        const publicationSession = await publishApiFunctions.openPublicationSession(channelUri, accessToken, dispatch);
-        dispatch({ type: OPEN_SESSION_RESPONSE, publicationSession, channelUri });
-        dispatch({
-            type: ADD_HEADER_MESSAGE,
-            message: "Channel '" + channelUri + "': A publication session was opened with ID '" + publicationSession.id + "'"
-        });
-        event.setFinished();
-    },
-    postPublication: (event) => async (dispatch, getState) => {
-        dispatch({ type: POST_PUBLICATION_REQUEST });
-        const accessToken = getState().publish.accessToken;
-        const response = await publishApiFunctions.postPublication(event.form.sessionId, event.form.message, accessToken, dispatch);
-        dispatch({ type: POST_PUBLICATION_RESPONSE, response });
+        const response = await subscribeApiFunctions.openSubscriptionSession(channelUri, event.form.session, accessToken, dispatch);
+        dispatch({ type: OPEN_SESSION_RESPONSE, response, channelUri });
         if (response.responseData.ok) {
             dispatch({
                 type: ADD_HEADER_MESSAGE,
-                message: "Session '" + event.form.sessionId + "': A publication message was created with ID '" + response.responseBody.id + "'"
+                message: "Channel '" + channelUri + "': A subscription session was opened with ID '" + response.responseBody.id + "'"
+            });
+        } else {
+            dispatch({
+                type: ADD_HEADER_MESSAGE,
+                message: "FAILURE - Channel '" + channelUri + "': " + response.responseBody.message
+            });
+        }
+        event.setFinished();
+    },
+    readPublication: (event) => async (dispatch, getState) => {
+        dispatch({ type: READ_PUBLICATION_REQUEST });
+        const accessToken = getState().publish.accessToken;
+        const response = await subscribeApiFunctions.readPublication(event.form.sessionId, accessToken, dispatch);
+        dispatch({ type: READ_PUBLICATION_REQUEST, response });
+        if (response.responseData.ok) {
+            dispatch({
+                type: ADD_HEADER_MESSAGE,
+                message: "Session '" + event.form.sessionId + "': A message was read.<pre/>" + JSON.stringify(response.responseBody, undefined, 2) + "</pre>"
             });
         } else {
             dispatch({
@@ -150,22 +157,22 @@ export const actionCreators = {
         }
         event.setFinished();
     },
-    expirePublication: (event) => async (dispatch, getState) => {
-        dispatch({ type: EXPIRE_PUBLICATION_REQUEST });
+    removePublication: (event) => async (dispatch, getState) => {
+        dispatch({ type: REMOVE_PUBLICATION_REQUEST });
         const accessToken = getState().publish.accessToken;
-        const message = await publishApiFunctions.expirePublication(event.form.sessionId, event.form.messageId, accessToken, dispatch);
-        dispatch({ type: EXPIRE_PUBLICATION_RESPONSE, message });
+        const message = await subscribeApiFunctions.removePublication(event.form.sessionId, accessToken, dispatch);
+        dispatch({ type: REMOVE_PUBLICATION_RESPONSE, message });
         dispatch({
             type: ADD_HEADER_MESSAGE,
-            message: "Session '" + event.form.sessionId + "': A publication message with ID '" + event.form.messageId + "' was expired"
+            message: "Session '" + event.form.sessionId + "': A publication may or may not have been removed."
         });
         event.setFinished();
     },
     closeSession: (event) => async (dispatch, getState) => {
-        dispatch({ type: CLOSE_PUBLICATION_SESSION_REQUEST });
+        dispatch({ type: CLOSE_SUBSCRIPTION_SESSION_REQUEST });
         const accessToken = getState().publish.accessToken;
-        const message = await publishApiFunctions.closeSession(event.form.sessionId, accessToken, dispatch);
-        dispatch({ type: CLOSE_PUBLICATIONSESSION_RESPONSE, message });
+        const message = await subscribeApiFunctions.closeSession(event.form.sessionId, accessToken, dispatch);
+        dispatch({ type: CLOSE_SUBSCRIPTION_SESSION_RESPONSE, message });
         dispatch({
             type: ADD_HEADER_MESSAGE,
             message: "Session '" + event.form.sessionId + "': Session was closed."
