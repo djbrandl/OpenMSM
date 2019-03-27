@@ -6,6 +6,8 @@ import Channels from './components/Channels';
 import Admin from './components/Admin';
 import Publish from './components/Publish';
 import Subscribe from './components/Subscribe';
+import Request from './components/Request';
+import Respond from './components/Respond';
 
 export default () => (
     <Layout>
@@ -14,5 +16,7 @@ export default () => (
         <Route path='/admin' component={Admin} />
         <Route path='/publish' component={Publish} />
         <Route path='/subscribe' component={Subscribe} />
+        <Route path='/request' component={Request} />
+        <Route path='/respond' component={Respond} />
     </Layout>
 );

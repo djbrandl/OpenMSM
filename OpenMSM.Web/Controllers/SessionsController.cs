@@ -444,7 +444,6 @@ namespace OpenMSM.Web.Controllers
             }
         }
 
-
         [HttpDelete("{sessionId}/responses/{requestMessageId}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
