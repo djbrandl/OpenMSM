@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
 using AutoMapper;
-using OpenMSM.Data;
 using OpenMSM.ServiceDefinitions;
 using OpenMSM.Web.Models;
 using OpenMSM.Web.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
+using OpenMSM.Web.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace OpenMSM.Web.Controllers
 {
@@ -23,7 +23,14 @@ namespace OpenMSM.Web.Controllers
         private ProviderRequestService _providerRequestService { get; set; }
         private ConsumerRequestService _consumerRequestService { get; set; }
 
-        public ChannelsController(ChannelManagementService channelManagementService, ProviderPublicationService providerPublicationService, ConsumerPublicationService consumerPublicationService, ProviderRequestService providerRequestService, ConsumerRequestService consumerRequestService, IMapper mapper) : base(mapper)
+        public ChannelsController(ChannelManagementService channelManagementService, 
+            ProviderPublicationService providerPublicationService, 
+            ConsumerPublicationService consumerPublicationService, 
+            ProviderRequestService providerRequestService, 
+            ConsumerRequestService consumerRequestService, 
+            IMapper mapper, 
+            IHubContext<AdminHub> hubContext, 
+            IHttpContextAccessor httpContextAccessor) : base(mapper, hubContext, httpContextAccessor)
         {
             this._channelManagementService = channelManagementService;
             this._providerPublicationService = providerPublicationService;
@@ -36,6 +43,7 @@ namespace OpenMSM.Web.Controllers
             this.ServicesList.Add(_providerRequestService);
             this.ServicesList.Add(_consumerRequestService);
         }
+
         #region Private Methods
 
         private IActionResult HandleChannelFault(ChannelFaultException e)
@@ -55,7 +63,7 @@ namespace OpenMSM.Web.Controllers
 
                 // Sending the link to the route for "CloseSession", but that requires a DELETE action to be taken.
                 // This is set for semantic purposes for the "Location" header that is returned.
-                return Created(new Uri(Url.Link("CloseSession", new { session.Id })), session);
+                return Created(new Uri(Url.Link("CloseSession", new { sessionId = session.Id })), session);
             }
             catch (ChannelFaultException e)
             {
@@ -199,6 +207,10 @@ namespace OpenMSM.Web.Controllers
             if (session == null)
             {
                 return BadRequest(new { message = "Malformed session object in HTTP body." });
+            }
+            if (!session.Topics.Any())
+            {
+                return UnprocessableEntity(new { message = "There must be at least 1 topic for a session." });
             }
             if (session.XPathNamespaces == null)
             {

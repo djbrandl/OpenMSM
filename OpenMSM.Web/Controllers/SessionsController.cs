@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
+using OpenMSM.Web.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace OpenMSM.Web.Controllers
 {
@@ -25,7 +27,15 @@ namespace OpenMSM.Web.Controllers
         private NotificationService _notificationService { get; set; }
         private AppDbContext _dbContext { get; set; }
 
-        public SessionsController(ProviderPublicationService providerPublicationService, ConsumerPublicationService consumerPublicationService, ProviderRequestService providerRequestService, ConsumerRequestService consumerRequestService, NotificationService notificationService, AppDbContext dbContext, IMapper mapper) : base(mapper)
+        public SessionsController(ProviderPublicationService providerPublicationService, 
+            ConsumerPublicationService consumerPublicationService, 
+            ProviderRequestService providerRequestService, 
+            ConsumerRequestService consumerRequestService, 
+            NotificationService notificationService, 
+            AppDbContext dbContext, 
+            IMapper mapper, 
+            IHubContext<AdminHub> hubContext, 
+            IHttpContextAccessor httpContextAccessor) : base(mapper, hubContext, httpContextAccessor)
         {
             this._dbContext = dbContext;
             this._providerPublicationService = providerPublicationService;
@@ -73,6 +83,10 @@ namespace OpenMSM.Web.Controllers
             if (message == null)
             {
                 return BadRequest(new { message = "Malformed message object in HTTP body." });
+            }
+            if (!message.Topics.Any())
+            {
+                return UnprocessableEntity(new { message = "There must be at least 1 topic for a publication message." });
             }
             try
             {
@@ -197,7 +211,7 @@ namespace OpenMSM.Web.Controllers
                     this.Response.Headers.Add("OpenMSM-Topic", retval.Topics.Any() ? retval.Topics.Aggregate((last, next) => last + ", " + next) : "");
                     return Ok(retval);
                 }
-                return Ok();
+                return Ok(new { });
             }
             catch (SessionFaultException e)
             {
@@ -254,7 +268,7 @@ namespace OpenMSM.Web.Controllers
                     this.Response.Headers.Add("OpenMSM-Topic", retval.Topics.Any() ? retval.Topics.Aggregate((last, next) => last + ", " + next) : "");
                     return Ok(retval);
                 }
-                return Ok();
+                return Ok(new { });
             }
             catch (SessionFaultException e)
             {
@@ -422,7 +436,7 @@ namespace OpenMSM.Web.Controllers
                     this.Response.Headers.Add("OpenMSM-Topic", string.Empty);
                     return Ok(retval);
                 }
-                return Ok();
+                return Ok(new { });
             }
             catch (SessionFaultException e)
             {

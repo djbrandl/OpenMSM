@@ -13,6 +13,9 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Security;
 using System.Security.Cryptography;
+using OpenMSM.Web.Hubs;
+using OpenMSM.Web.Middleware;
+using Microsoft.Extensions.Logging;
 
 namespace OpenMSM.Web
 {
@@ -36,13 +39,14 @@ namespace OpenMSM.Web
                 client.DefaultRequestHeaders.Add("User-Agent", "OpenMSM Service Provider");
             });
 
+            services.AddScoped<AdminHub>();
             services.AddScoped<ChannelManagementService>();
             services.AddScoped<ConsumerPublicationService>();
             services.AddScoped<ProviderPublicationService>();
             services.AddScoped<ConsumerRequestService>();
             services.AddScoped<ProviderRequestService>();
             services.AddScoped<NotificationService>();
-
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddMvc().AddJsonOptions(options =>
             {
                 options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
@@ -61,6 +65,15 @@ namespace OpenMSM.Web
             services.AddSpaStaticFiles(configuration =>
             {
                 configuration.RootPath = "ClientApp/build";
+            });
+
+            services.AddSignalR();
+            services.AddCors();
+
+            services.AddLogging(loggingBuilder => {
+                loggingBuilder.AddConfiguration(Configuration.GetSection("Logging"));
+                loggingBuilder.AddConsole();
+                loggingBuilder.AddDebug();
             });
         }
 
@@ -82,8 +95,12 @@ namespace OpenMSM.Web
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
-
+            app.UseRequestResponseLogging();
             app.UseMvc();
+            
+            app.UseSignalR(routes => {
+                routes.MapHub<OpenMSM.Web.Hubs.AdminHub>("/admin/hub");
+            });
 
             app.UseSpa(spa =>
             {

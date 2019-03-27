@@ -1,5 +1,4 @@
-﻿//import { reset } from 'redux-form';
-
+﻿import { SET_LAST_API_HEADER, ADD_HEADER_MESSAGE } from './HeaderLogging'
 export const REQUEST_CHANNELS = 'REQUEST_CHANNELS'
 export const RECEIVE_CHANNELS = 'RECEIVE_CHANNELS'
 export const SET_ACCESS_TOKEN = 'SET_ACCESS_TOKEN'
@@ -13,7 +12,14 @@ export const TOGGLE_API = 'TOGGLE_API'
 export const SET_LAST_API = 'SET_LAST_API'
 
 const initialState = {
-    channels: [], isLoading: false, accessToken: '', activeTab: 'Get', showApi: false, lastApiCallUrl: '', lastApiCallDetails: {}, lastApiResponse: {}
+    channels: [],
+    isLoading: false,
+    accessToken: '',
+    activeTab: 'Get',
+    showApi: false,
+    lastApiCallUrl: '',
+    lastApiCallDetails: {},
+    lastApiResponse: {}
 };
 
 const buildResponse = (response) => {
@@ -42,7 +48,7 @@ const channelApiFunctions = {
             const response = await fetch(url, options);
             const channels = await response.json();
             if (dispatch) {
-                dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+                dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
             }
             return channels;
         }
@@ -61,7 +67,7 @@ const channelApiFunctions = {
         };
         const response = await fetch(url, options);
         if (dispatch) {
-            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+            dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
         return response;
     },
@@ -78,7 +84,7 @@ const channelApiFunctions = {
         };
         const response = await fetch(url, options);
         if (dispatch) {
-            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+            dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
         return response;
     },
@@ -94,7 +100,7 @@ const channelApiFunctions = {
         };
         const response = await fetch(url, options);
         if (dispatch) {
-            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+            dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
         return response;
     },
@@ -109,7 +115,7 @@ const channelApiFunctions = {
         };
         const response = await fetch(url, options);
         if (dispatch) {
-            dispatch({ type: SET_LAST_API, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
+            dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
         return response;
     }
@@ -127,25 +133,36 @@ export const actionCreators = {
             object[key] = value;
         });
         dispatch({ type: SET_ACCESS_TOKEN, accessToken: object['token'] });
-        dispatch({ type: REQUEST_CHANNELS });
-        const channels = await channelApiFunctions.getChannels(object['token'], dispatch);
-        dispatch({ type: RECEIVE_CHANNELS, channels });
     },
     setActiveTab: (tab) => async (dispatch, getState) => {
         dispatch({ type: CHANGE_TAB, tab: tab });
     },
+    getChannels: () => async (dispatch, getState) => {
+        dispatch({ type: REQUEST_CHANNELS });
+        const channels = await channelApiFunctions.getChannels(getState().channels.accessToken, dispatch);
+        dispatch({ type: RECEIVE_CHANNELS, channels });
+    },
     addSecurityTokens: (event) => async (dispatch, getState) => {
-        await channelApiFunctions.addSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens, dispatch);
+        await channelApiFunctions.addSecurityTokens(event.data.channelUri, getState().channels.accessToken, event.data.securityTokens, dispatch);
+        dispatch({
+            type: ADD_HEADER_MESSAGE, message: "Channel '" + event.data.channelUri + "': Added " + event.data.securityTokens.length + " security tokens to channel."
+        });
         event.setFinished();
         dispatch({ type: ADD_ACCESS_TOKEN });
     },
     removeSecurityTokens: (event) => async (dispatch, getState) => {
-        await channelApiFunctions.removeSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens, dispatch);
+        await channelApiFunctions.removeSecurityTokens(event.data.channelUri, getState().channels.accessToken, event.data.securityTokens, dispatch);
+        dispatch({
+            type: ADD_HEADER_MESSAGE, message: "Channel '" + event.data.channelUri + "': Removed security tokens from channel."
+        });
         event.setFinished();
         dispatch({ type: REMOVE_ACCESS_TOKEN });
     },
     deleteChannel: (event) => async (dispatch, getState) => {
-        await channelApiFunctions.deleteChannel(event.data.channelUri, event.data.accessToken, dispatch);
+        await channelApiFunctions.deleteChannel(event.data.channelUri, getState().channels.accessToken, dispatch);
+        dispatch({
+            type: ADD_HEADER_MESSAGE, message: "Channel '" + event.data.channelUri + "': Deleted channel."
+        });
         event.setFinished();
         dispatch({ type: DELETE_CHANNEL });
     },
@@ -155,16 +172,11 @@ export const actionCreators = {
         values.securityTokens.push({ token: values.token });
         delete values.token;
         await channelApiFunctions.createChannel(values, dispatch);
+        dispatch({
+            type: ADD_HEADER_MESSAGE, message: "Channel '" + values.uri + "': Created channel."
+        });
         event.setFinished();
         dispatch({ type: CREATE_CHANNELS_RECEIVE });
-    },
-    requestChannels: () => async (dispatch, getState) => {
-        dispatch({ type: REQUEST_CHANNELS });
-
-        const accessToken = getState().channels.accessToken;
-        const channels = await channelApiFunctions.getChannels(accessToken, dispatch);
-
-        dispatch({ type: RECEIVE_CHANNELS, channels });
     }
 };
 

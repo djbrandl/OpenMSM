@@ -17,4 +17,90 @@ html {
   box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
 }
 
+.admin-message {
+    margin-bottom: 10px;
+}
+
+.admin-message .card-header {
+    cursor: pointer;
+}
+
+.admin-message .json-body {
+    height: 200px;
+    overflow: scroll;
+}
+
+.admin-message-request {
+    border-right: 1px solid #CCC;
+}
+
+.admin-message h2 {
+    font-size: 1.25rem;
+}
+
+.admin-message h4 {
+    font-size: 1.1rem;
+    border-bottom: 1px solid #CCC;
+    padding-bottom: 10px;
+}
+
+
+#header-logging {
+    position: fixed;
+    width: 700px;
+    height: 800px;
+    top: 30px;
+    right: -700px;
+    /* Animation  */
+    transition-property: all;
+    transition-duration: .5s;
+    
+}
+
+
+/* Display slideOut */
+
+.showSlideOut {
+    right: 0px !important;
+    z-index: 10;
+}
+
+
+/* Tab */
+
+.slideOutTab {
+    margin-top: 50px;
+    position: absolute;
+    left: -40px;
+    height: 200px;
+    width: 40px;
+    -webkit-box-shadow: 0 5px 15px rgba(0, 0, 0, .5);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, .5);
+    background: #F2AB34;
+    border-radius: 15px 0px 0px 15px
+}
+
+    .slideOutTab div {
+        text-align: center;
+        position: relative;
+        right: 70px;
+        top: 90px;
+        background: #F2AB34;
+        width: 180px;
+        -webkit-transform: rotate(270deg);
+        -moz-transform: rotate(270deg);
+        -o-transform: rotate(270deg);
+        writing-mode: lr-tb;
+    }
+
+
+/* None relevant included styling */
+
+
+#header-logging .modal-body {
+    height: 400px;
+    overflow:auto;
+    font-size: .85em;
+}
+
 

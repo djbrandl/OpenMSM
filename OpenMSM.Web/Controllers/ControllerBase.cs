@@ -8,18 +8,31 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using OpenMSM.ServiceDefinitions;
+using OpenMSM.Web.Hubs;
+using Microsoft.AspNetCore.SignalR;
+using OpenMSM.Web.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace OpenMSM.Web.Controllers
 {
     public class ControllerBase : Controller
     {
+        private IHubContext<AdminHub> HubContext { get; }
+        protected IHttpContextAccessor HttpContextAccessor { get; }
         protected IMapper Mapper { get; private set; }
         protected IList<ServiceBase> ServicesList { get; set; }
 
-        public ControllerBase(IMapper mapper)
+        public ControllerBase(IMapper mapper, IHubContext<AdminHub> hubContext, IHttpContextAccessor httpContextAccessor)
         {
             this.Mapper = mapper;
             this.ServicesList = new List<ServiceBase>();
+            this.HubContext = hubContext;
+            this.HttpContextAccessor = httpContextAccessor;
+        }
+
+        protected async Task SendAdminLog(LogApiMessage logMessage)
+        {
+            await HubContext.Clients.All.SendAsync(AdminHub.ActionOccurred, logMessage);
         }
 
         public override void OnActionExecuting(ActionExecutingContext context)

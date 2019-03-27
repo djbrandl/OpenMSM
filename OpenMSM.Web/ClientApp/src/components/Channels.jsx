@@ -5,47 +5,33 @@ import { actionCreators } from '../store/Channels';
 import { Jumbotron, Collapse, Card, CardTitle, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, FormGroup, FormText, Label, Input, Button, InputGroup, InputGroupAddon } from 'reactstrap';
 import { Formik, Form, Field, FieldArray, ErrorMessage } from 'formik';
 import classnames from 'classnames';
+import HeaderLogging from './HeaderLogging';
 
-class FetchData extends Component {
+class Channel extends Component {
     componentDidMount() {
         this.ensureDataFetched();
     }
     ensureDataFetched() {
-        this.props.requestChannels();
+        this.props.getChannels();
     }
-
     render() {
         return (
             <div>
+                <HeaderLogging />
                 <Jumbotron>
                     <h1 className="display-3">Channels</h1>
-                    <p className="lead">This component demonstrates functionality of the Channel REST API.</p>
+                    <p className="lead">This component demonstrates Channel management functionality of the REST API.</p>
                     <hr className="my-2" />
-                    <p>To see the details of the web calls performed, click the button below to show/hide the API call details.</p>
-                    <Button onClick={this.props.toggleApi}>Toggle API details</Button>
-                    <Collapse isOpen={this.props.showApi}>
-                        <Row>
-                            <Col sm="6">
-                                <Card body>
-                                    <CardTitle>{this.props.lastApiCallUrl}</CardTitle>
-                                    <pre>
-                                        {JSON.stringify(this.props.lastApiCallDetails, undefined, 2)}
-                                    </pre>
-                                </Card>
+                    <Form onSubmit={(e) => { this.props.setAccessToken(e); }}>
+                        <FormGroup row>
+                            <Label for="token" sm={3}>Set Access Token for all API calls</Label>
+                            <Col sm={7}>
+                                <Input type="text" name="token" id="token" placeholder="Access Token" />
                             </Col>
-
-                            <Col sm="6">
-                                <Card body>
-                                    <CardTitle>Response</CardTitle>
-                                    <pre>
-                                        {JSON.stringify(this.props.lastApiResponse, undefined, 2)}
-                                    </pre>
-                                </Card>
-                            </Col>
-                        </Row>
-                    </Collapse>
+                            <Button sm="2">Set</Button>
+                        </FormGroup>
+                    </Form>
                 </Jumbotron>
-
                 <Nav tabs>
                     <NavItem>
                         <NavLink className={classnames({ active: this.props.activeTab === 'Get' })} onClick={() => { this.props.setActiveTab('Get'); }} href='#'>Get Channels</NavLink>
@@ -187,25 +173,24 @@ function renderAddTokens(props) {
                                     </Col>
                                 </FormGroup>
                                 <FormGroup row>
-                                    <Label for="accessToken" sm={2}>Access Token</Label>
-                                    <Col sm={10}>
-                                        <Field className="form-control" type="password" name="accessToken" />
+                                    <Label sm="2">Security Tokens</Label>
+                                    <Col sm="10">
+                                        {!values.securityTokens || values.securityTokens.length === 0 ?
+                                            <FormGroup row>
+                                                <Button onClick={() => arrayHelpers.push({ token: '' })}>Add Token to List</Button>
+                                            </FormGroup>
+                                            : ('')}
+                                        {values.securityTokens.map((securityToken, index) => (
+                                            <FormGroup row key={index} >
+                                                <InputGroup size="lg">
+                                                    <Field className='form-control' name={`securityTokens[${index}].token`} />
+                                                    <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.push({ token: '' })}>&nbsp;+&nbsp;</Button></InputGroupAddon>
+                                                    <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
+                                                </InputGroup>
+                                            </FormGroup>
+                                        ))}
                                     </Col>
                                 </FormGroup>
-                                {!values.securityTokens || values.securityTokens.length === 0 ?
-                                    <FormGroup row>
-                                        <Button onClick={() => arrayHelpers.push({ token: '' })}>Add Token to List</Button>
-                                    </FormGroup>
-                                    : ('')}
-                                {values.securityTokens.map((securityToken, index) => (
-                                    <FormGroup row key={index} >
-                                        <InputGroup size="lg">
-                                            <Field className='form-control' name={`securityTokens[${index}].token`} />
-                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.push({ token: '' })}>&nbsp;+&nbsp;</Button></InputGroupAddon>
-                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
-                                        </InputGroup>
-                                    </FormGroup>
-                                ))}
                                 <br />
                                 {values.securityTokens && values.securityTokens.length > 0 ? (
                                     <Button type="submit" disabled={isSubmitting}>Submit</Button>
@@ -240,25 +225,24 @@ function renderRemoveTokens(props) {
                                     </Col>
                                 </FormGroup>
                                 <FormGroup row>
-                                    <Label for="accessToken" sm={2}>Access Token</Label>
-                                    <Col sm={10}>
-                                        <Field className="form-control" type="password" name="accessToken" />
+                                    <Label sm="2">Security Tokens</Label>
+                                    <Col sm="10">
+                                        {!values.securityTokens || values.securityTokens.length === 0 ?
+                                            <FormGroup row>
+                                                <Button onClick={() => arrayHelpers.push({ token: '' })}>Add Token to List</Button>
+                                            </FormGroup>
+                                            : ('')}
+                                        {values.securityTokens.map((securityToken, index) => (
+                                            <FormGroup row key={index} >
+                                                <InputGroup size="lg">
+                                                    <Field className='form-control' name={`securityTokens[${index}].token`} />
+                                                    <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.push({ token: '' })}>&nbsp;+&nbsp;</Button></InputGroupAddon>
+                                                    <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
+                                                </InputGroup>
+                                            </FormGroup>
+                                        ))}
                                     </Col>
                                 </FormGroup>
-                                {!values.securityTokens || values.securityTokens.length === 0 ?
-                                    <FormGroup row>
-                                        <Button onClick={() => arrayHelpers.push({ token: '' })}>Add Token to List</Button>
-                                    </FormGroup>
-                                    : ('')}
-                                {values.securityTokens.map((securityToken, index) => (
-                                    <FormGroup row key={index} >
-                                        <InputGroup size="lg">
-                                            <Field className='form-control' name={`securityTokens[${index}].token`} />
-                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.push({ token: '' })}>&nbsp;+&nbsp;</Button></InputGroupAddon>
-                                            <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
-                                        </InputGroup>
-                                    </FormGroup>
-                                ))}
                                 <br />
                                 {values.securityTokens && values.securityTokens.length > 0 ? (
                                     <Button type="submit" disabled={isSubmitting}>Submit</Button>
@@ -281,7 +265,6 @@ function renderDeleteChannel(props) {
             }}>
             {({ isSubmitting }) => (
                 <Form>
-
                     <FormGroup row>
                         <Label for="channelUri" sm={2}>URI</Label>
                         <Col sm={10}>
@@ -289,32 +272,19 @@ function renderDeleteChannel(props) {
                             <ErrorMessage name="channelUri" component="div" />
                         </Col>
                     </FormGroup>
-                    <FormGroup row>
-                        <Label for="accessToken" sm={2}>Access Token</Label>
-                        <Col sm={10}>
-                            <Field className="form-control" type="password" name="accessToken" />
-                        </Col>
-                    </FormGroup>
-
                     <Button type="submit" disabled={isSubmitting}>Submit</Button>
                 </Form>
             )}
         </Formik >
     )
 }
+
 function renderGetChannels(props) {
     return (
         <Row>
             <Col sm="12">
-                <Form onSubmit={(e) => { props.setAccessToken(e); }}>
-                    <FormGroup row>
-                        <Label for="token" sm={3}>Set Access Token</Label>
-                        <Col sm={7}>
-                            <Input type="text" name="token" id="token" placeholder="Access Token" />
-                        </Col>
-                        <Button sm="2">Set</Button>
-                    </FormGroup>
-                </Form>
+                <Button onClick={props.getChannels} color="primary" className="d-block">Refresh Channels</Button>
+                <br />
                 <table className='table table-striped'>
                     <thead>
                         <tr>
@@ -341,4 +311,4 @@ function renderGetChannels(props) {
 export default connect(
     state => state.channels,
     dispatch => bindActionCreators(actionCreators, dispatch)
-)(FetchData);
+)(Channel);
