@@ -12,7 +12,14 @@ export const TOGGLE_API = 'TOGGLE_API'
 export const SET_LAST_API = 'SET_LAST_API'
 
 const initialState = {
-    channels: [], isLoading: false, accessToken: '', activeTab: 'Get', showApi: false, lastApiCallUrl: '', lastApiCallDetails: {}, lastApiResponse: {}
+    channels: [],
+    isLoading: false,
+    accessToken: '',
+    activeTab: 'Get',
+    showApi: false,
+    lastApiCallUrl: '',
+    lastApiCallDetails: {},
+    lastApiResponse: {}
 };
 
 const buildResponse = (response) => {
@@ -126,15 +133,17 @@ export const actionCreators = {
             object[key] = value;
         });
         dispatch({ type: SET_ACCESS_TOKEN, accessToken: object['token'] });
-        dispatch({ type: REQUEST_CHANNELS });
-        const channels = await channelApiFunctions.getChannels(object['token'], dispatch);
-        dispatch({ type: RECEIVE_CHANNELS, channels });
     },
     setActiveTab: (tab) => async (dispatch, getState) => {
         dispatch({ type: CHANGE_TAB, tab: tab });
     },
+    getChannels: () => async (dispatch, getState) => {
+        dispatch({ type: REQUEST_CHANNELS });
+        const channels = await channelApiFunctions.getChannels(getState().channels.accessToken, dispatch);
+        dispatch({ type: RECEIVE_CHANNELS, channels });
+    },
     addSecurityTokens: (event) => async (dispatch, getState) => {
-        await channelApiFunctions.addSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens, dispatch);
+        await channelApiFunctions.addSecurityTokens(event.data.channelUri, getState().channels.accessToken, event.data.securityTokens, dispatch);
         dispatch({
             type: ADD_HEADER_MESSAGE, message: "Channel '" + event.data.channelUri + "': Added " + event.data.securityTokens.length + " security tokens to channel."
         });
@@ -142,7 +151,7 @@ export const actionCreators = {
         dispatch({ type: ADD_ACCESS_TOKEN });
     },
     removeSecurityTokens: (event) => async (dispatch, getState) => {
-        await channelApiFunctions.removeSecurityTokens(event.data.channelUri, event.data.accessToken, event.data.securityTokens, dispatch);
+        await channelApiFunctions.removeSecurityTokens(event.data.channelUri, getState().channels.accessToken, event.data.securityTokens, dispatch);
         dispatch({
             type: ADD_HEADER_MESSAGE, message: "Channel '" + event.data.channelUri + "': Removed security tokens from channel."
         });
@@ -150,7 +159,7 @@ export const actionCreators = {
         dispatch({ type: REMOVE_ACCESS_TOKEN });
     },
     deleteChannel: (event) => async (dispatch, getState) => {
-        await channelApiFunctions.deleteChannel(event.data.channelUri, event.data.accessToken, dispatch);
+        await channelApiFunctions.deleteChannel(event.data.channelUri, getState().channels.accessToken, dispatch);
         dispatch({
             type: ADD_HEADER_MESSAGE, message: "Channel '" + event.data.channelUri + "': Deleted channel."
         });
@@ -168,14 +177,6 @@ export const actionCreators = {
         });
         event.setFinished();
         dispatch({ type: CREATE_CHANNELS_RECEIVE });
-    },
-    requestChannels: () => async (dispatch, getState) => {
-        dispatch({ type: REQUEST_CHANNELS });
-
-        const accessToken = getState().channels.accessToken;
-        const channels = await channelApiFunctions.getChannels(accessToken, dispatch);
-
-        dispatch({ type: RECEIVE_CHANNELS, channels });
     }
 };
 

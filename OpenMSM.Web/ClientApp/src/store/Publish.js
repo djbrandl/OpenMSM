@@ -128,7 +128,7 @@ export const actionCreators = {
         dispatch({ type: OPEN_SESSION_RESPONSE, publicationSession, channelUri });
         dispatch({
             type: ADD_HEADER_MESSAGE,
-            message: "Channel '" + channelUri + "': A publication session was opened with ID '" + publicationSession.id + "'"
+            message: "Channel '" + channelUri + "': A publication session was opened with ID " + publicationSession.id + ""
         });
         event.setFinished();
     },

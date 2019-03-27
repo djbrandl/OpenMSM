@@ -225,7 +225,7 @@ function renderRemoveMessage(props) {
                 <Form>
                     <h2>Remove a publication message</h2>
                     <FormGroup row>
-                        <Label for="sessionId" sm={2}>URI</Label>
+                        <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
                             <Field className="form-control" type="text" name="sessionId" />
                             <ErrorMessage name="sessionId" component="div" />

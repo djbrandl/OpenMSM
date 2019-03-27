@@ -141,7 +141,7 @@ export const actionCreators = {
         event.setFinished();
     },
     readPublication: (event) => async (dispatch, getState) => {
-        //dispatch({ type: READ_PUBLICATION_REQUEST });
+        dispatch({ type: READ_PUBLICATION_REQUEST });
         const sub = getState().subscribe;
         const accessToken = sub.accessToken;
         const response = await subscribeApiFunctions.readPublication(event.form.sessionId, accessToken, dispatch);
