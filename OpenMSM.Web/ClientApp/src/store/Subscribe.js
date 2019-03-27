@@ -149,7 +149,7 @@ export const actionCreators = {
         if (response.responseData.ok) {
             dispatch({
                 type: ADD_HEADER_MESSAGE,
-                message: "Session '" + event.form.sessionId + "': A message was read.<pre/>" + JSON.stringify(response.responseBody, undefined, 2) + "</pre>"
+                message: "Session '" + event.form.sessionId + "': A message was read. " + JSON.stringify(response.responseBody, undefined, 2)
             });
         } else {
             dispatch({
