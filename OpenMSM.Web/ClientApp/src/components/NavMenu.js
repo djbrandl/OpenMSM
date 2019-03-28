@@ -39,6 +39,12 @@ export default class NavMenu extends React.Component {
                                     <NavLink tag={Link} className="text-dark" to="/subscribe">Subscribe</NavLink>
                                 </NavItem>
                                 <NavItem>
+                                    <NavLink tag={Link} className="text-dark" to="/request">Request</NavLink>
+                                </NavItem>
+                                <NavItem>
+                                    <NavLink tag={Link} className="text-dark" to="/respond">Respond</NavLink>
+                                </NavItem>
+                                <NavItem>
                                     <NavLink tag={Link} className="text-dark" to="/admin">Admin</NavLink>
                                 </NavItem>
                             </ul>

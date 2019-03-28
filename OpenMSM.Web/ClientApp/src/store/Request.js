@@ -32,19 +32,14 @@ const requestApiFunctions = {
             },
             body: JSON.stringify({ listenerURL })
         };
-        try {
-            const response = await fetch(url, options);
-            const session = await response.json();
-            if (dispatch) {
-                let builtResponse = buildResponse(response);
-                builtResponse.body = session;
-                dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: builtResponse });
-            }
-            return session;
+        const response = await fetch(url, options);
+        const returnMessage = await response.json();
+        if (dispatch) {
+            let builtResponse = buildResponse(response);
+            builtResponse.body = returnMessage;
+            dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: builtResponse });
         }
-        catch (e) {
-
-        }
+        return { responseData: response, responseBody: returnMessage };
     },
     postRequest: async (sessionId, message, accessToken, dispatch) => {
         const url = 'api/sessions/' + encodeURIComponent(sessionId) + '/requests';
@@ -96,7 +91,7 @@ const requestApiFunctions = {
         if (dispatch) {
             dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
-        return response;
+        return { responseData: response, responseBody: {} };
     },
     closeSession: async (sessionId, accessToken, dispatch) => {
         const url = 'api/sessions/' + encodeURIComponent(sessionId);
@@ -111,7 +106,7 @@ const requestApiFunctions = {
         if (dispatch) {
             dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
-        return response;
+        return { responseData: response, responseBody: {} };
     }
 };
 
@@ -130,75 +125,63 @@ export const actionCreators = {
     },
     openSession: (event) => async (dispatch, getState) => {
         dispatch({ type: ASYNC_REQUEST_REQUEST, data: 'Open request session' });
-        const accessToken = getState().publish.accessToken;
-        const session = await requestApiFunctions.openRequestSession(event.form.channelUri, event.form.listenerURL, accessToken, dispatch);
-        dispatch({ type: ASYNC_REQUEST_RESPOSNE, data: session });
-        dispatch({ type: ADD_HEADER_MESSAGE, message: "Channel '" + event.form.channelUri + "': A consumer request session was opened with ID " + session.id + "" });
+        const accessToken = getState().request.accessToken;
+        const response = await requestApiFunctions.openRequestSession(event.form.channelUri, event.form.listenerURL, accessToken, dispatch);
+        dispatch({ type: ASYNC_REQUEST_RESPOSNE, data: response });
+        if (response.responseData.ok) {
+            dispatch({ type: ADD_HEADER_MESSAGE, message: "Channel '" + event.form.channelUri + "': A consumer request session was opened with ID " + response.responseBody.id + "" });
+        } else {
+            dispatch({ type: ADD_HEADER_MESSAGE, message: "FAILURE - Channel '" + event.form.channelUri + "': " + response.responseBody.message });
+        }
         event.setFinished();
     },
     postRequest: (event) => async (dispatch, getState) => {
         dispatch({ type: ASYNC_REQUEST_REQUEST, data: 'Post request' });
-        const accessToken = getState().publish.accessToken;
+        const accessToken = getState().request.accessToken;
         const response = await requestApiFunctions.postRequest(event.form.sessionId, event.form.message, accessToken, dispatch);
         dispatch({ type: ASYNC_REQUEST_RESPOSNE, data: response });
         if (response.responseData.ok) {
-            dispatch({
-                type: ADD_HEADER_MESSAGE,
-                message: "Session '" + event.form.sessionId + "': A request message has been posted with ID " + response.responseBody.id + ""
-            });
+            dispatch({ type: ADD_HEADER_MESSAGE, message: "Session '" + event.form.sessionId + "': A request message has been posted with ID " + response.responseBody.id + "" });
         } else {
-            dispatch({
-                type: ADD_HEADER_MESSAGE,
-                message: "FAILURE - Session '" + event.form.sessionId + "': " + response.responseBody.message
-            });
+            dispatch({ type: ADD_HEADER_MESSAGE, message: "FAILURE - Session '" + event.form.sessionId + "': " + response.responseBody.message });
         }
         event.setFinished();
     },
     readResponse: (event) => async (dispatch, getState) => {
         dispatch({ type: ASYNC_REQUEST_REQUEST, data: 'Read response' });
-        const accessToken = getState().publish.accessToken;
+        const accessToken = getState().request.accessToken;
         const response = await requestApiFunctions.readResponse(event.form.sessionId, event.form.requestMessageId, accessToken, dispatch);
         dispatch({ type: ASYNC_REQUEST_RESPOSNE, data: response });
         if (response.responseData.ok) {
-            dispatch({
-                type: ADD_HEADER_MESSAGE,
-                message: "Session '" + event.form.sessionId + "': A message was read. " + JSON.stringify(response.responseBody, undefined, 2)
+            dispatch({ type: ADD_HEADER_MESSAGE, message: "Session '" + event.form.sessionId + "': A message was read. " + JSON.stringify(response.responseBody, undefined, 2)
             });
         } else {
-            dispatch({
-                type: ADD_HEADER_MESSAGE,
-                message: "FAILURE - Session '" + event.form.sessionId + "': " + response.responseBody.message
-            });
+            dispatch({ type: ADD_HEADER_MESSAGE, message: "FAILURE - Session '" + event.form.sessionId + "': " + response.responseBody.message });
         }
         event.setFinished();
     },
     removeResponse: (event) => async (dispatch, getState) => {
         dispatch({ type: ASYNC_REQUEST_REQUEST, data: 'Remove response' });
-        const accessToken = getState().publish.accessToken;
+        const accessToken = getState().request.accessToken;
         const response = await requestApiFunctions.removeResponse(event.form.sessionId, event.form.requestMessageId, accessToken, dispatch);
         dispatch({ type: ASYNC_REQUEST_RESPOSNE, data: response });
         if (response.responseData.ok) {
-            dispatch({
-                type: ADD_HEADER_MESSAGE,
-                message: "Session '" + event.form.sessionId + "': Message " + event.form.requestMessageId + " was removed."
-            });
+            dispatch({ type: ADD_HEADER_MESSAGE, message: "Session '" + event.form.sessionId + "': Message " + event.form.requestMessageId + " was removed." });
         } else {
-            dispatch({
-                type: ADD_HEADER_MESSAGE,
-                message: "FAILURE - Session '" + event.form.sessionId + "': " + response.responseBody.message
-            });
+            dispatch({ type: ADD_HEADER_MESSAGE, message: "FAILURE - Session '" + event.form.sessionId + "': " + response.responseBody.message });
         }
         event.setFinished();
     },
     closeSession: (event) => async (dispatch, getState) => {
         dispatch({ type: ASYNC_REQUEST_REQUEST, data: 'Close session' });
-        const accessToken = getState().publish.accessToken;
-        const message = await requestApiFunctions.closeSession(event.form.sessionId, accessToken, dispatch);
-        dispatch({ type: ASYNC_REQUEST_RESPOSNE, data: message });
-        dispatch({
-            type: ADD_HEADER_MESSAGE,
-            message: "Session '" + event.form.sessionId + "': Session was closed."
-        });
+        const accessToken = getState().request.accessToken;
+        const response = await requestApiFunctions.closeSession(event.form.sessionId, accessToken, dispatch);
+        dispatch({ type: ASYNC_REQUEST_RESPOSNE, data: response });
+        if (response.responseData.ok) {
+            dispatch({ type: ADD_HEADER_MESSAGE, message: "Session '" + event.form.sessionId + "': Session was closed." });
+        } else {
+            dispatch({ type: ADD_HEADER_MESSAGE, message: "FAILURE - Session '" + event.form.sessionId + "': " + response.responseBody.message });
+        }
         event.setFinished();
     }
 };

@@ -63,9 +63,7 @@ const subscribeApiFunctions = {
         };
         try {
             const response = await fetch(url, options);
-            console.log(response);
             const returnMessage = await response.json();
-            console.log(returnMessage);
             if (dispatch) {
                 let builtResponse = buildResponse(response);
                 builtResponse.body = returnMessage;

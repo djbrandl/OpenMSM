@@ -1,19 +1,19 @@
 ﻿import React, { Component } from 'react';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
-import { actionCreators } from '../store/Subscribe';
+import { actionCreators } from '../store/Respond';
 import { Jumbotron, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, FormGroup, FormText, Label, Input, Button, InputGroup, InputGroupAddon } from 'reactstrap';
 import { Formik, Form, Field, FieldArray, ErrorMessage } from 'formik';
 import classnames from 'classnames';
 import HeaderLogging from './HeaderLogging';
 
-class Subscribe extends Component {
+class Respond extends Component {
     render() {
         return (
             <div>
                 <HeaderLogging />
                 <Jumbotron>
-                    <h1 className="display-3">Subscriber</h1>
+                    <h1 className="display-3">Responder</h1>
                     <p className="lead">This component demonstrates Subscriber session functionality of the REST API.</p>
                     <hr className="my-2" />
                     <Form onSubmit={(e) => { this.props.setAccessToken(e); }}>
@@ -28,16 +28,19 @@ class Subscribe extends Component {
                 </Jumbotron>
                 <Nav tabs>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Open' })} onClick={() => { this.props.setActiveTab('Open'); }} href='#'>Open Subscription Session</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Open' })} onClick={() => { this.props.setActiveTab('Open'); }} href='#'>Open Response Session</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Read' })} onClick={() => { this.props.setActiveTab('Read') }} href='#'>Read Publication Message</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Read' })} onClick={() => { this.props.setActiveTab('Read') }} href='#'>Read Request Message</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Remove' })} onClick={() => { this.props.setActiveTab('Remove') }} href='#'>Remove Publication Message</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Remove' })} onClick={() => { this.props.setActiveTab('Remove') }} href='#'>Remove Request Message</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Close' })} onClick={() => { this.props.setActiveTab('Close') }} href='#'>Close Subscription Session</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Post' })} onClick={() => { this.props.setActiveTab('Post') }} href='#'>Post Response Message</NavLink>
+                    </NavItem>
+                    <NavItem>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Close' })} onClick={() => { this.props.setActiveTab('Close') }} href='#'>Close Response Session</NavLink>
                     </NavItem>
                 </Nav>
                 <TabContent activeTab={this.props.activeTab}>
@@ -65,6 +68,14 @@ class Subscribe extends Component {
                             </Col>
                         </Row>
                     </TabPane>
+                    <TabPane tabId="Post">
+                        <Row>
+                            <Col sm="12">
+                                <br />
+                                {renderPostMessage(this.props)}
+                            </Col>
+                        </Row>
+                    </TabPane>
                     <TabPane tabId="Close">
                         <Row>
                             <Col sm="12">
@@ -82,7 +93,7 @@ class Subscribe extends Component {
 function renderOpenSession(props) {
     return (
         <Formik
-            initialValues={{ channelUri: '', session: { type: 'PublicationConsumer', listenerUrl: '', xPathExpression: '', topics: [''], xPathNamespaces: [] } }}
+            initialValues={{ channelUri: '', session: { type: 'RequestProvider', listenerUrl: '', xPathExpression: '', topics: [''], xPathNamespaces: [] } }}
             validate={values => {
                 let errors = {};
                 if (!values.channelUri) {
@@ -96,7 +107,7 @@ function renderOpenSession(props) {
 
             {({ values, isSubmitting }) => (
                 <Form>
-                    <h2>Open a subscription session</h2>
+                    <h2>Open a response session</h2>
                     <FormGroup row>
                         <Label for="channelUri" sm={2}>Channel URI</Label>
                         <Col sm={10}>
@@ -186,12 +197,12 @@ function renderReadMessage(props) {
                 return errors;
             }}
             onSubmit={(values, { resetForm }) => {
-                props.readPublication({ form: values, setFinished: () => resetForm() });
+                props.readRequest({ form: values, setFinished: () => resetForm() });
             }}>
 
             {({ isSubmitting }) => (
                 <Form>
-                    <h2>Read a publication message</h2>
+                    <h2>Read a request message</h2>
                     <FormGroup row>
                         <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
@@ -218,17 +229,65 @@ function renderRemoveMessage(props) {
                 return errors;
             }}
             onSubmit={(values, { resetForm }) => {
-                props.removePublication({ form: values, setFinished: () => resetForm() });
+                props.removeRequest({ form: values, setFinished: () => resetForm() });
             }}>
 
             {({ isSubmitting }) => (
                 <Form>
-                    <h2>Remove a publication message</h2>
+                    <h2>Remove a request message</h2>
                     <FormGroup row>
                         <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
                             <Field className="form-control" type="text" name="sessionId" />
                             <ErrorMessage name="sessionId" component="div" />
+                        </Col>
+                    </FormGroup>
+                    <Button type="submit" disabled={isSubmitting}>Submit</Button>
+                </Form>
+            )}
+        </Formik>
+    );
+}
+
+function renderPostMessage(props) {
+    return (
+        <Formik
+            initialValues={{ sessionId: '', requestMessageId: '', message: { type: 'Response', content: '', duration: '', topics: [''] } }}
+            validate={values => {
+                let errors = {};
+                if (!values.sessionId) {
+                    errors.sessionId = 'Required';
+                }
+                if (!values.requestMessageId) {
+                    errors.requestMessageId = 'Required';
+                }
+                return errors;
+            }}
+            onSubmit={(values, { resetForm }) => {
+                props.postResponse({ form: values, setFinished: () => resetForm() });
+            }}>
+
+            {({ isSubmitting }) => (
+                <Form>
+                    <h2>Post a response message</h2>
+                    <FormGroup row>
+                        <Label for="sessionId" sm={2}>Session ID</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" type="text" name="sessionId" />
+                            <ErrorMessage name="sessionId" component="div" />
+                        </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                        <Label for="requestMessageId" sm={2}>Request Message ID</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" type="text" name="requestMessageId" />
+                            <ErrorMessage name="requestMessageId" component="div" />
+                        </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                        <Label for="message.content" sm={2}>Content</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" component="textarea" name="message.content" />
                         </Col>
                     </FormGroup>
                     <Button type="submit" disabled={isSubmitting}>Submit</Button>
@@ -255,7 +314,7 @@ function renderCloseSession(props) {
 
             {({ isSubmitting }) => (
                 <Form>
-                    <h2>Close a publication session</h2>
+                    <h2>Close a response session</h2>
                     <FormGroup row>
                         <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
@@ -271,6 +330,6 @@ function renderCloseSession(props) {
 }
 
 export default connect(
-    state => state.subscribe,
+    state => state.respond,
     dispatch => bindActionCreators(actionCreators, dispatch)
-)(Subscribe);
+)(Respond);

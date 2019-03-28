@@ -1,20 +1,20 @@
 ﻿import React, { Component } from 'react';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
-import { actionCreators } from '../store/Publish';
+import { actionCreators } from '../store/Request';
 import { Jumbotron, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, FormGroup, FormText, Label, Input, Button, InputGroup, InputGroupAddon } from 'reactstrap';
 import { Formik, Form, Field, FieldArray, ErrorMessage } from 'formik';
 import classnames from 'classnames';
 import HeaderLogging from './HeaderLogging';
 
-class Publish extends Component {
+class Request extends Component {
     render() {
         return (
             <div>
                 <HeaderLogging />
                 <Jumbotron>
-                    <h1 className="display-3">Publisher</h1>
-                    <p className="lead">This component demonstrates Publisher session functionality of the REST API.</p>
+                    <h1 className="display-3">Requester</h1>
+                    <p className="lead">This component demonstrates Request session functionality of the REST API.</p>
                     <hr className="my-2" />
                     <Form onSubmit={(e) => { this.props.setAccessToken(e); }}>
                         <FormGroup row>
@@ -28,16 +28,19 @@ class Publish extends Component {
                 </Jumbotron>
                 <Nav tabs>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Open' })} onClick={() => { this.props.setActiveTab('Open'); }} href='#'>Open Publication Session</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Open' })} onClick={() => { this.props.setActiveTab('Open'); }} href='#'>Open Request Session</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Post' })} onClick={() => { this.props.setActiveTab('Post') }} href='#'>Post Publication Message</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Post' })} onClick={() => { this.props.setActiveTab('Post') }} href='#'>Post Request Message</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Expire' })} onClick={() => { this.props.setActiveTab('Expire') }} href='#'>Expire Publication Message</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Read' })} onClick={() => { this.props.setActiveTab('Read') }} href='#'>Read Response Message</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Close' })} onClick={() => { this.props.setActiveTab('Close') }} href='#'>Close Publication Session</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Remove' })} onClick={() => { this.props.setActiveTab('Remove') }} href='#'>Remove Response Message</NavLink>
+                    </NavItem>
+                    <NavItem>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Close' })} onClick={() => { this.props.setActiveTab('Close') }} href='#'>Close Request Session</NavLink>
                     </NavItem>
                 </Nav>
                 <TabContent activeTab={this.props.activeTab}>
@@ -57,11 +60,19 @@ class Publish extends Component {
                             </Col>
                         </Row>
                     </TabPane>
-                    <TabPane tabId="Expire">
+                    <TabPane tabId="Read">
                         <Row>
                             <Col sm="12">
                                 <br />
-                                {renderExpireMessage(this.props)}
+                                {renderReadMessage(this.props)}
+                            </Col>
+                        </Row>
+                    </TabPane>
+                    <TabPane tabId="Remove">
+                        <Row>
+                            <Col sm="12">
+                                <br />
+                                {renderRemoveMessage(this.props)}
                             </Col>
                         </Row>
                     </TabPane>
@@ -82,7 +93,7 @@ class Publish extends Component {
 function renderOpenSession(props) {
     return (
         <Formik
-            initialValues={{ channelUri: '' }}
+            initialValues={{ channelUri: '', listenerURL: '' }}
             validate={values => {
                 let errors = {};
                 if (!values.channelUri) {
@@ -96,12 +107,21 @@ function renderOpenSession(props) {
 
             {({ isSubmitting }) => (
                 <Form>
-                    <h2>Open a publication session</h2>
+                    <h2>Open a request session</h2>
                     <FormGroup row>
-                        <Label for="channelUri" sm={2}>URI</Label>
+                        <Label for="channelUri" sm={2}>Channel URI</Label>
                         <Col sm={10}>
                             <Field className="form-control" type="text" name="channelUri" />
                             <ErrorMessage name="channelUri" component="div" />
+                        </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                        <Label for="listenerURL" sm={2}>Listener URL</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" type="text" name="listenerURL" />
+                            <FormText color="muted">
+                                This is the URL which will be notified by OpenMSM when this session's outgoing requests have a response.
+                            </FormText>
                         </Col>
                     </FormGroup>
                     <Button type="submit" disabled={isSubmitting}>Submit</Button>
@@ -114,7 +134,7 @@ function renderOpenSession(props) {
 function renderPostMessage(props) {
     return (
         <Formik
-            initialValues={{ sessionId: '', message: { type: 'Publication', content: '', duration: '', topics: [''] } }}
+            initialValues={{ sessionId: '', message: { type: 'Request', content: '', duration: '', topics: [''] } }}
             validate={values => {
                 let errors = {};
                 if (!values.sessionId) {
@@ -123,12 +143,12 @@ function renderPostMessage(props) {
                 return errors;
             }}
             onSubmit={(values, { resetForm }) => {
-                props.postPublication({ form: values, setFinished: () => resetForm() });
+                props.postRequest({ form: values, setFinished: () => resetForm() });
             }}>
 
-            {({ values, isSubmitting }) => (
+            {({ isSubmitting }) => (
                 <Form>
-                    <h2>Post a publication message</h2>
+                    <h2>Post a request message</h2>
                     <FormGroup row>
                         <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
@@ -151,26 +171,12 @@ function renderPostMessage(props) {
                             </FormText>
                         </Col>
                     </FormGroup>
-                    <FieldArray
-                        name="message.topics"
-                        render={arrayHelpers => (
-                            <FormGroup row>
-                                <Label sm="2">Topics</Label>
-                                <Col sm="10">
-                                    {values.message.topics.map((topic, index) => (
-                                        <FormGroup row key={index} >
-                                            <InputGroup size="md">
-                                                <Field className='form-control' name={`message.topics[${index}]`} />
-                                                <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.push('')}>&nbsp;+&nbsp;</Button></InputGroupAddon>
-                                                {index > 0 ?
-                                                    <InputGroupAddon addonType="append"><Button onClick={() => arrayHelpers.remove(index)}>&nbsp;-&nbsp;</Button></InputGroupAddon>
-                                                    : ('')}
-                                            </InputGroup>
-                                        </FormGroup>
-                                    ))}
-                                </Col>
-                            </FormGroup>
-                        )} />                   
+                    <FormGroup row>
+                        <Label for="message.topics[0]" sm={2}>Topic</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" type="text" name="message.topics[0]" />
+                        </Col>
+                    </FormGroup>                                  
                     <Button type="submit" disabled={isSubmitting}>Submit</Button>
                 </Form>
             )}
@@ -178,27 +184,27 @@ function renderPostMessage(props) {
     );
 }
 
-function renderExpireMessage(props) {
+function renderReadMessage(props) {
     return (
         <Formik
-            initialValues={{ sessionId: '', messageId: '' }}
+            initialValues={{ sessionId: '', requestMessageId: '' }}
             validate={values => {
                 let errors = {};
                 if (!values.sessionId) {
                     errors.sessionId = 'Required';
                 }
-                if (!values.messageId) {
-                    errors.messageId = 'Required';
+                if (!values.requestMessageId) {
+                    errors.requestMessageId = 'Required';
                 }
                 return errors;
             }}
             onSubmit={(values, { resetForm }) => {
-                props.expirePublication({ form: values, setFinished: () => resetForm() });
+                props.readResponse({ form: values, setFinished: () => resetForm() });
             }}>
 
             {({ isSubmitting }) => (
                 <Form>
-                    <h2>Expire a publication message</h2>
+                    <h2>Read a response message</h2>
                     <FormGroup row>
                         <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
@@ -207,10 +213,52 @@ function renderExpireMessage(props) {
                         </Col>
                     </FormGroup>
                     <FormGroup row>
-                        <Label for="messageId" sm={2}>Message ID</Label>
+                        <Label for="requestMessageId" sm={2}>Request Message ID</Label>
                         <Col sm={10}>
-                            <Field className="form-control" type="text" name="messageId" />
-                            <ErrorMessage name="messageId" component="div" />
+                            <Field className="form-control" type="text" name="requestMessageId" />
+                            <ErrorMessage name="requestMessageId" component="div" />
+                        </Col>
+                    </FormGroup>
+                    <Button type="submit" disabled={isSubmitting}>Submit</Button>
+                </Form>
+            )}
+        </Formik>
+    );
+}
+
+function renderRemoveMessage(props) {
+    return (
+        <Formik
+            initialValues={{ sessionId: '', requestMessageId: '' }}
+            validate={values => {
+                let errors = {};
+                if (!values.sessionId) {
+                    errors.sessionId = 'Required';
+                }
+                if (!values.requestMessageId) {
+                    errors.requestMessageId = 'Required';
+                }
+                return errors;
+            }}
+            onSubmit={(values, { resetForm }) => {
+                props.removeResponse({ form: values, setFinished: () => resetForm() });
+            }}>
+
+            {({ isSubmitting }) => (
+                <Form>
+                    <h2>Remove a response message</h2>
+                    <FormGroup row>
+                        <Label for="sessionId" sm={2}>Session ID</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" type="text" name="sessionId" />
+                            <ErrorMessage name="sessionId" component="div" />
+                        </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                        <Label for="requestMessageId" sm={2}>Request Message ID</Label>
+                        <Col sm={10}>
+                            <Field className="form-control" type="text" name="requestMessageId" />
+                            <ErrorMessage name="requestMessageId" component="div" />
                         </Col>
                     </FormGroup>
                     <Button type="submit" disabled={isSubmitting}>Submit</Button>
@@ -237,7 +285,7 @@ function renderCloseSession(props) {
 
             {({ isSubmitting }) => (
                 <Form>
-                    <h2>Close a publication session</h2>
+                    <h2>Close a request session</h2>
                     <FormGroup row>
                         <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
@@ -253,6 +301,6 @@ function renderCloseSession(props) {
 }
 
 export default connect(
-    state => state.publish,
+    state => state.request,
     dispatch => bindActionCreators(actionCreators, dispatch)
-)(Publish);
+)(Request);

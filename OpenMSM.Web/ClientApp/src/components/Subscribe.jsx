@@ -255,7 +255,7 @@ function renderCloseSession(props) {
 
             {({ isSubmitting }) => (
                 <Form>
-                    <h2>Close a publication session</h2>
+                    <h2>Close a subscription session</h2>
                     <FormGroup row>
                         <Label for="sessionId" sm={2}>Session ID</Label>
                         <Col sm={10}>
