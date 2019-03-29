@@ -8,8 +8,6 @@ using OpenMSM.Web.Models;
 using OpenMSM.Web.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using OpenMSM.Web.Hubs;
-using Microsoft.AspNetCore.SignalR;
 
 namespace OpenMSM.Web.Controllers
 {
@@ -23,14 +21,12 @@ namespace OpenMSM.Web.Controllers
         private ProviderRequestService _providerRequestService { get; set; }
         private ConsumerRequestService _consumerRequestService { get; set; }
 
-        public ChannelsController(ChannelManagementService channelManagementService, 
-            ProviderPublicationService providerPublicationService, 
-            ConsumerPublicationService consumerPublicationService, 
-            ProviderRequestService providerRequestService, 
-            ConsumerRequestService consumerRequestService, 
-            IMapper mapper, 
-            IHubContext<AdminHub> hubContext, 
-            IHttpContextAccessor httpContextAccessor) : base(mapper, hubContext, httpContextAccessor)
+        public ChannelsController(ChannelManagementService channelManagementService,
+            ProviderPublicationService providerPublicationService,
+            ConsumerPublicationService consumerPublicationService,
+            ProviderRequestService providerRequestService,
+            ConsumerRequestService consumerRequestService,
+            IMapper mapper) : base(mapper)
         {
             this._channelManagementService = channelManagementService;
             this._providerPublicationService = providerPublicationService;

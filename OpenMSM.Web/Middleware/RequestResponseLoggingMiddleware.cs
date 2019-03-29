@@ -1,11 +1,12 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using OpenMSM.Data;
+using OpenMSM.Data.Models;
 using OpenMSM.Web.Hubs;
-using OpenMSM.Web.Models;
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,16 +16,19 @@ namespace OpenMSM.Web.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger _logger;
+        private readonly AppDbContext _appDbContext;
         private readonly IHubContext<AdminHub> _hubContext;
 
         public RequestResponseLoggingMiddleware(RequestDelegate next,
                                                 ILoggerFactory loggerFactory,
-                                                IHubContext<AdminHub> hubContext)
+                                                IHubContext<AdminHub> hubContext,
+                                                AppDbContext appDbContext)
         {
             _next = next;
             _logger = loggerFactory
                       .CreateLogger<RequestResponseLoggingMiddleware>();
             _hubContext = hubContext;
+            _appDbContext = appDbContext;
         }
 
         public async Task Invoke(HttpContext context)
@@ -80,40 +84,18 @@ namespace OpenMSM.Web.Middleware
                 message.ResponseBody = text;
                 message.RespondedOn = DateTime.UtcNow;
                 await _hubContext.Clients.All.SendAsync(AdminHub.ActionOccurred, message);
+                if(_appDbContext.Configuration != null && _appDbContext.Configuration.StoreLogMessages)
+                {
+                    var messageCount = _appDbContext.LogApiMessages.Count();
+                    if(_appDbContext.Configuration.NumberOfMessagesToStore >= 0 && messageCount >= _appDbContext.Configuration.NumberOfMessagesToStore)
+                    {
+                        _appDbContext.LogApiMessages.Remove(_appDbContext.LogApiMessages.OrderByDescending(m => m.RespondedOn).FirstOrDefault());
+                    }
+                    _appDbContext.LogApiMessages.Add(message);
+                    _appDbContext.SaveChanges();
+                }
                 await responseStream.CopyToAsync(originalBodyStream);
             }
-        }
-
-        private async Task FormatResponse(HttpResponse response, LogApiMessage logApiMessage)
-        {
-            response.Body.Seek(0, SeekOrigin.Begin);
-            var text = await new StreamReader(response.Body).ReadToEndAsync();
-            response.Body.Seek(0, SeekOrigin.Begin);
-
-            logApiMessage.ResponseStatus = response.StatusCode;
-            logApiMessage.ResponseBody = text;
-        }
-
-        private async Task<string> FormatRequestToString(HttpRequest request)
-        {
-            var body = request.Body;
-            request.EnableRewind();
-
-            var buffer = new byte[Convert.ToInt32(request.ContentLength)];
-            await request.Body.ReadAsync(buffer, 0, buffer.Length);
-            var bodyAsText = Encoding.UTF8.GetString(buffer);
-            request.Body = body;
-
-            return $"{request.Scheme} {request.Host}{request.Path} {request.QueryString} {bodyAsText}";
-        }
-
-        private async Task<string> FormatResponseToString(HttpResponse response)
-        {
-            response.Body.Seek(0, SeekOrigin.Begin);
-            var text = await new StreamReader(response.Body).ReadToEndAsync();
-            response.Body.Seek(0, SeekOrigin.Begin);
-
-            return $"Response {text}";
         }
     }
 }

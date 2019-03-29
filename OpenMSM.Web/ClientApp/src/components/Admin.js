@@ -9,6 +9,7 @@ import classnames from 'classnames';
 class Admin extends Component {
     componentDidMount() {
         this.props.startSignalR();
+        this.props.getConfiguration();
     }
     render() {
         return (
@@ -72,7 +73,6 @@ class Admin extends Component {
                         </Row>
                     </TabPane>
                 </TabContent>
-
             </div>
         );
     }

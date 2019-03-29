@@ -1,14 +1,14 @@
 ﻿using System;
 
-namespace OpenMSM.Web.Models
+namespace OpenMSM.Data.Models
 {
-    public class LogApiMessage
+    public class LogApiMessage : BaseEntity
     {
         public LogApiMessage()
         {
 
         }
-        
+
         public string RequestIP { get; set; }
         public string RequestURL { get; set; }
         public string RequestMethod { get; set; }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
 using AutoMapper;
@@ -9,10 +8,6 @@ using OpenMSM.Web.Models;
 using OpenMSM.Web.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.EntityFrameworkCore;
-using OpenMSM.Web.Hubs;
-using Microsoft.AspNetCore.SignalR;
 
 namespace OpenMSM.Web.Controllers
 {
@@ -33,9 +28,7 @@ namespace OpenMSM.Web.Controllers
             ConsumerRequestService consumerRequestService, 
             NotificationService notificationService, 
             AppDbContext dbContext, 
-            IMapper mapper, 
-            IHubContext<AdminHub> hubContext, 
-            IHttpContextAccessor httpContextAccessor) : base(mapper, hubContext, httpContextAccessor)
+            IMapper mapper) : base(mapper)
         {
             this._dbContext = dbContext;
             this._providerPublicationService = providerPublicationService;

@@ -1,9 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Extensions;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using OpenMSM.Data.Models;
+using System.Linq;
+
 namespace OpenMSM.Data
 {
     public class AppDbContext : DbContext
@@ -34,5 +32,14 @@ namespace OpenMSM.Data
         public DbSet<Session> Sessions { get; set; }
         public DbSet<SessionTopic> SessionTopics { get; set; }
         public DbSet<SessionNamespace> SessionNamespaces { get; set; }
+        private DbSet<Configuration> Configurations { get; set; }
+        public Configuration Configuration
+        {
+            get
+            {
+                return Configurations.FirstOrDefault();
+            }
+        }
+        public DbSet<LogApiMessage> LogApiMessages { get; set; }
     }
 }
