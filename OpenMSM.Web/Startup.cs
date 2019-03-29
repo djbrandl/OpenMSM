@@ -49,6 +49,7 @@ namespace OpenMSM.Web
             services.AddScoped<ProviderRequestService>();
             services.AddScoped<NotificationService>();
             services.AddScoped<PingService>();
+            services.AddScoped<IMessageFilter, SOAPHeaderHandler>();
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             services.AddSoapCore();

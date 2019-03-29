@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
+using System.Xml.Linq;
 
 namespace OpenMSM.Web.Services
 {
@@ -10,10 +11,17 @@ namespace OpenMSM.Web.Services
         public static XmlElement ToXmlElement(this string s)
         {
             var doc = new XmlDocument();
-            var root = doc.CreateElement(string.Empty, "root", string.Empty);
-            var text = doc.CreateTextNode(s);
-            root.AppendChild(text);
-            doc.AppendChild(root);
+            if (s.IsValidXml())
+            {
+                doc.LoadXml(s);
+            }
+            else
+            {
+                var root = doc.CreateElement(string.Empty, "root", string.Empty);
+                var text = doc.CreateTextNode(s);
+                root.AppendChild(text);
+                doc.AppendChild(root);
+            }
             return doc.DocumentElement;
         }
 
@@ -25,6 +33,19 @@ namespace OpenMSM.Web.Services
         public static bool IsGuid(this string s)
         {
             return Guid.TryParse(s, out Guid g);
+        }
+
+        public static bool IsValidXml(this string s)
+        {
+            try
+            {
+                XDocument.Parse(s);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }
