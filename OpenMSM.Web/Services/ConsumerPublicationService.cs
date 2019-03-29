@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using OpenMSM.Data;
 using OpenMSM.Data.Models;
-using OpenMSM.ServiceDefinitions;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -11,10 +10,13 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
 using System.Xml.XPath;
+using OpenMSM.Web.ServiceDefinitions;
+using System.ServiceModel;
+using www.openoandm.org.wsisbm;
 
 namespace OpenMSM.Web.Services
 {
-    public class ConsumerPublicationService : ServiceBase, IConsumerPublicationServiceSoap
+    public class ConsumerPublicationService : ServiceBase, IConsumerPublicationService
     {
         public ConsumerPublicationService(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper) { }
         
@@ -28,39 +30,45 @@ namespace OpenMSM.Web.Services
             }
         }
 
-        public string OpenSubscriptionSession(string ChannelURI, [XmlElement("Topic")] string[] Topic, string ListenerURL, string XPathExpression, [XmlElement("XPathNamespace")] Namespace[] XPathNamespace)
+        public Task CloseSubscriptionSessionAsync(string SessionID)
         {
-            if (string.IsNullOrWhiteSpace(ChannelURI))
+            return Task.Factory.StartNew(() => CloseSubscriptionSession(SessionID));
+        }
+        
+        [return: MessageParameter(Name = "SessionID")]
+        public OpenSubscriptionSessionResponse OpenSubscriptionSession(OpenSubscriptionSessionRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.ChannelURI))
             {
-                throw new ChannelFaultException("ChannelURI cannot be null or empty.", new ArgumentNullException("ChannelURI"));
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("ChannelURI cannot be null or empty."), new FaultCode("Sender"), string.Empty);
             }
-            var channel = GetChannelByUri(ChannelURI);
+            var channel = GetChannelByUri(request.ChannelURI);
             if (channel == null)
             {
-                throw new ChannelFaultException("A channel with the specified URI does not exist.");
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("A channel with the specified URI does not exist."), new FaultCode("Sender"), string.Empty);
             }
             if (!DoPermissionsMatchChannel(channel))
             {
-                throw new ChannelFaultException("Provided header security token does not match the token assigned to the channel.");
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("Provided header security token does not match the token assigned to the channel."), new FaultCode("Sender"), string.Empty);
             }
             if (channel.Type != OpenMSM.Data.Models.ChannelType.Publication)
             {
-                throw new OperationFaultException("Channel type is not of type \"Publication\".");
+                throw new FaultException<OperationFault>(new OperationFault(), new FaultReason("Channel type is not of type \"Publication\"."), new FaultCode("Sender"), string.Empty);
             }
-            ValidateXPath(XPathExpression);
+            ValidateXPath(request.XPathExpression);
 
             var session = new Session
             {
                 Type = SessionType.Subscriber,
                 ChannelId = channel.Id,
-                ListenerURI = ListenerURL,
-                XPathExpression = XPathExpression,
-                SessionNamespaces = XPathNamespace == null ? new SessionNamespace[0] : XPathNamespace.Select(m => new SessionNamespace
+                ListenerURI = request.ListenerURL,
+                XPathExpression = request.XPathExpression,
+                SessionNamespaces = request.XPathNamespace == null ? new SessionNamespace[0] : request.XPathNamespace.Select(m => new SessionNamespace
                 {
                     Name = m.NamespaceName,
                     Prefix = m.NamespacePrefix
                 }).ToArray(),
-                SessionTopics = Topic == null ? new SessionTopic[0] : Topic.Select(m => new SessionTopic
+                SessionTopics = request.Topic == null ? new SessionTopic[0] : request.Topic.Select(m => new SessionTopic
                 {
                     Topic = m
                 }).ToArray()
@@ -68,7 +76,12 @@ namespace OpenMSM.Web.Services
 
             appDbContext.Add(session);
             appDbContext.SaveChanges();
-            return session.Id.ToString();
+            return new OpenSubscriptionSessionResponse { SessionID = session.Id.ToString() };
+        }
+
+        public Task<OpenSubscriptionSessionResponse> OpenSubscriptionSessionAsync(OpenSubscriptionSessionRequest request)
+        {
+            return Task.Factory.StartNew(() => OpenSubscriptionSession(request));
         }
 
         public PublicationMessage ReadPublication(string SessionID)
@@ -98,6 +111,12 @@ namespace OpenMSM.Web.Services
             };
         }
 
+        [return: MessageParameter(Name = "PublicationMessage")]
+        public Task<PublicationMessage> ReadPublicationAsync(string SessionID)
+        {
+            return Task.Factory.StartNew(() => ReadPublication(SessionID));
+        }
+
         public void RemovePublication(string SessionID)
         {
             var session = CheckSession(SessionID, SessionType.Subscriber);
@@ -112,6 +131,11 @@ namespace OpenMSM.Web.Services
 
             appDbContext.Remove(messageSession);
             appDbContext.SaveChanges();
+        }
+
+        public Task RemovePublicationAsync(string SessionID)
+        {
+            return Task.Factory.StartNew(() => RemovePublication(SessionID));
         }
     }
 }

@@ -103,4 +103,7 @@ html {
     font-size: .85em;
 }
 
+input[type="checkbox"].form-control {
+    width: 20px;
+}
 

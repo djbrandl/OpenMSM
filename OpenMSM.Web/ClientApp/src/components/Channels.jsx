@@ -2,7 +2,7 @@
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { actionCreators } from '../store/Channels';
-import { Jumbotron, Collapse, Card, CardTitle, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, FormGroup, FormText, Label, Input, Button, InputGroup, InputGroupAddon } from 'reactstrap';
+import { Jumbotron, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, FormGroup, FormText, Label, Input, Button, InputGroup, InputGroupAddon } from 'reactstrap';
 import { Formik, Form, Field, FieldArray, ErrorMessage } from 'formik';
 import classnames from 'classnames';
 import HeaderLogging from './HeaderLogging';

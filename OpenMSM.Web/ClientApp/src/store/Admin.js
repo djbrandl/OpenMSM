@@ -11,7 +11,7 @@ const initialState = {
     activeTab: 'Log',
     logMessages: [],
     storeLogMessages: true,
-    NumberOfMessagesToStore: 2000
+    numberOfMessagesToStore: 2000
 };
 
 const adminApiFunctions = {
@@ -37,8 +37,7 @@ const adminApiFunctions = {
             body: JSON.stringify(configuration)
         };
         const response = await fetch(url, options);
-        const returnMessage = await response.json();
-        return { responseData: response, responseBody: returnMessage };
+        return { responseData: response, responseBody: {} };
     },
 }
 
@@ -61,8 +60,10 @@ export const actionCreators = {
     },
     updateConfiguration: (form) => async (dispatch, getState) => {
         const configuration = form.values;
+        console.log(configuration);
         await adminApiFunctions.updateConfiguration(configuration);
         dispatch({ type: GET_CONFIGURATION, configuration });
+        form.setFinished();
     }
 };
 
@@ -81,7 +82,8 @@ export const reducer = (state, action) => {
     if (action.type === GET_CONFIGURATION) {
         return {
             ...state,
-            activeTab: action.tab
+            storeLogMessages: action.configuration.storeLogMessages,
+            numberOfMessagesToStore: action.configuration.numberOfMessagesToStore
         };
     }
 

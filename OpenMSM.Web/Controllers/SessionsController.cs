@@ -3,11 +3,13 @@ using System.Linq;
 using System.Xml;
 using AutoMapper;
 using OpenMSM.Data;
-using OpenMSM.ServiceDefinitions;
 using OpenMSM.Web.Models;
 using OpenMSM.Web.Services;
+using OpenMSM.Web.ServiceDefinitions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using www.openoandm.org.wsisbm;
+using System.ServiceModel;
 
 namespace OpenMSM.Web.Controllers
 {
@@ -44,17 +46,17 @@ namespace OpenMSM.Web.Controllers
 
         #region Private Methods
 
-        private IActionResult HandleSessionFault(SessionFaultException e)
+        private IActionResult HandleSessionFault(FaultException<SessionFault> e)
         {
-            if (e.Message.IndexOf("Provided header security token") >= 0)
+            if (e.Reason.ToString().IndexOf("Provided header security token") >= 0)
             {
-                return Unauthorized(new { message = e.Message });
+                return Unauthorized(new { message = e.Reason.ToString() });
             }
-            if (e.Message.IndexOf("is not of the correct type") >= 0)
+            if (e.Reason.ToString().IndexOf("is not of the correct type") >= 0)
             {
-                return UnprocessableEntity(new { message = e.Message });
+                return UnprocessableEntity(new { message = e.Reason.ToString() });
             }
-            return NotFound(new { message = e.Message });
+            return NotFound(new { message = e.Reason.ToString() });
         }
 
         #endregion
@@ -85,7 +87,12 @@ namespace OpenMSM.Web.Controllers
             {
                 var doc = new XmlDocument();
                 doc.LoadXml(message.Content);
-                var messageId = _providerPublicationService.PostPublication(sessionId, doc.DocumentElement, message.Topics, message.Duration);
+                var messageId = _providerPublicationService.PostPublication(new PostPublicationRequest {
+                    SessionID = sessionId,
+                    MessageContent = doc.DocumentElement,
+                    Topic = message.Topics,
+                    Expiry = message.Duration
+                }).MessageID;
 
                 // fire and forget the call to notify all listeners
                 _notificationService.NotifyAllListeners(new Guid(sessionId), new Guid(messageId));
@@ -96,7 +103,7 @@ namespace OpenMSM.Web.Controllers
             {
                 return UnprocessableEntity(new { message = "Failed to format message content as XML. Please send the XML content as valid XML." });
             }
-            catch (SessionFaultException e)
+            catch (FaultException<SessionFault> e)
             {
                 return HandleSessionFault(e);
             }
@@ -126,7 +133,7 @@ namespace OpenMSM.Web.Controllers
                 _providerPublicationService.ExpirePublication(sessionId, messageId);
                 return NoContent();
             }
-            catch (SessionFaultException e)
+            catch (FaultException<SessionFault> e)
             {
                 return HandleSessionFault(e);
             }
@@ -206,7 +213,7 @@ namespace OpenMSM.Web.Controllers
                 }
                 return Ok(new { });
             }
-            catch (SessionFaultException e)
+            catch (FaultException<SessionFault> e)
             {
                 return HandleSessionFault(e);
             }
@@ -228,7 +235,7 @@ namespace OpenMSM.Web.Controllers
                 _consumerPublicationService.RemovePublication(sessionId);
                 return NoContent();
             }
-            catch (SessionFaultException e)
+            catch (FaultException<SessionFault> e)
             {
                 return HandleSessionFault(e);
             }
@@ -263,7 +270,7 @@ namespace OpenMSM.Web.Controllers
                 }
                 return Ok(new { });
             }
-            catch (SessionFaultException e)
+            catch (FaultException<SessionFault> e)
             {
                 return HandleSessionFault(e);
             }
@@ -285,7 +292,7 @@ namespace OpenMSM.Web.Controllers
                 _providerRequestService.RemoveRequest(sessionId);
                 return NoContent();
             }
-            catch (SessionFaultException e)
+            catch (FaultException<SessionFault> e)
             {
                 return HandleSessionFault(e);
             }
@@ -326,7 +333,7 @@ namespace OpenMSM.Web.Controllers
             {
                 return UnprocessableEntity(new { message = "Failed to format message content as XML. Please send the XML content as valid XML." });
             }
-            catch (SessionFaultException e)
+            catch (FaultException<SessionFault> e)
             {
                 return HandleSessionFault(e);
             }
@@ -356,7 +363,12 @@ namespace OpenMSM.Web.Controllers
             {
                 var doc = new XmlDocument();
                 doc.LoadXml(message.Content);
-                var messageId = _consumerRequestService.PostRequest(sessionId, doc.DocumentElement, message.Topics.FirstOrDefault(), message.Duration);
+                var messageId = _consumerRequestService.PostRequest(new PostRequestRequest {
+                    SessionID = sessionId,
+                    MessageContent = doc.DocumentElement,
+                    Topic = message.Topics.FirstOrDefault(),
+                    Expiry = message.Duration
+                }).MessageID;
 
                 // fire and forget the call to notify all listeners
                 _notificationService.NotifyAllListeners(new Guid(sessionId), new Guid(messageId));
@@ -367,7 +379,7 @@ namespace OpenMSM.Web.Controllers
             {
                 return UnprocessableEntity(new { message = "Failed to format message content as XML. Please send the XML content as valid XML." });
             }
-            catch (SessionFaultException e)
+            catch (FaultException<SessionFault> e)
             {
                 return HandleSessionFault(e);
             }
@@ -397,7 +409,7 @@ namespace OpenMSM.Web.Controllers
                 _consumerRequestService.ExpireRequest(sessionId, messageId);
                 return NoContent();
             }
-            catch (SessionFaultException e)
+            catch (FaultException<SessionFault> e)
             {
                 return HandleSessionFault(e);
             }
@@ -431,7 +443,7 @@ namespace OpenMSM.Web.Controllers
                 }
                 return Ok(new { });
             }
-            catch (SessionFaultException e)
+            catch (FaultException<SessionFault> e)
             {
                 return HandleSessionFault(e);
             }
@@ -457,7 +469,7 @@ namespace OpenMSM.Web.Controllers
                 _consumerRequestService.RemoveResponse(sessionId, requestMessageId);
                 return NoContent();
             }
-            catch (SessionFaultException e)
+            catch (FaultException<SessionFault> e)
             {
                 return HandleSessionFault(e);
             }

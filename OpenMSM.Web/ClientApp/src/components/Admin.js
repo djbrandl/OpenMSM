@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { actionCreators } from '../store/Admin';
-import { Jumbotron, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col } from 'reactstrap';
+import { Jumbotron, TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, FormGroup, Label, Button, FormText } from 'reactstrap';
+import { Formik, Form, Field } from 'formik';
 import LogMessage from './LogMessage'
 import classnames from 'classnames';
 
@@ -23,10 +24,7 @@ class Admin extends Component {
                         <NavLink className={classnames({ active: this.props.activeTab === 'Log' })} onClick={() => { this.props.setActiveTab('Log'); }} href='#'>Live Message Logging</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Orphan' })} onClick={() => { this.props.setActiveTab('Orphan') }} href='#'>Orphaned Sessions</NavLink>
-                    </NavItem>
-                    <NavItem>
-                        <NavLink className={classnames({ active: this.props.activeTab === 'Dead' })} onClick={() => { this.props.setActiveTab('Dead') }} href='#'>Identify Dead Apps</NavLink>
+                        <NavLink className={classnames({ active: this.props.activeTab === 'Sessions' })} onClick={() => { this.props.setActiveTab('Sessions') }} href='#'>Sessions by Last Activity</NavLink>
                     </NavItem>
                     <NavItem>
                         <NavLink className={classnames({ active: this.props.activeTab === 'Options' })} onClick={() => { this.props.setActiveTab('Options') }} href='#'>Security Options</NavLink>
@@ -43,19 +41,11 @@ class Admin extends Component {
                             </Col>
                         </Row>
                     </TabPane>
-                    <TabPane tabId="Orphan">
+                    <TabPane tabId="Sessions">
                         <Row>
                             <Col sm="12">
                                 <br />
                                 Kill orphaned sessions (show sessions ordered by most recent activity descending)
-                            </Col>
-                        </Row>
-                    </TabPane>
-                    <TabPane tabId="Dead">
-                        <Row>
-                            <Col sm="12">
-                                <br />
-                                Identify dead apps - those who have messages being created and no subscribers/responders OR those who have loads of old messages that are unread
                             </Col>
                         </Row>
                     </TabPane>
@@ -64,9 +54,36 @@ class Admin extends Component {
                             <Col sm="12">
                                 <br />
                                 Control security options
+                                <Formik
+                                    enableReinitialize
+                                    initialValues={{ storeLogMessages: this.props.storeLogMessages, numberOfMessagesToStore: this.props.numberOfMessagesToStore }}
+                                    onSubmit={(values, { setSubmitting }) => {
+                                        this.props.updateConfiguration({ values, setFinished: () => setSubmitting(false) });
+                                    }}>
+
+                                    {({ isSubmitting }) => (
+                                        <Form>
+                                            <h4>Update Logging Configuration</h4>
+                                            <FormGroup row>
+                                                <Label for="storeLogMessages" sm={2}>Store Log Messages?</Label>
+                                                <Col sm={10}>
+                                                    <Field className="form-control" type="checkbox" checked={this.props.storeLogMessages ? "checked" : false} name="storeLogMessages" />
+                                                </Col>
+                                            </FormGroup>
+                                            <FormGroup row>
+                                                <Label for="numberOfMessagesToStore" sm={2}>Number of Messages to Store</Label>
+                                                <Col sm={10}>
+                                                    <Field className="form-control" type="text" name="numberOfMessagesToStore" />
+                                                </Col>
+                                            </FormGroup>
+                                            <FormText>This for allows for the storing of all API message requests and responses in the database in their raw form. Please only turn this on for debugging purposes. This data is only viewable in the database "LogApiMessages" table.</FormText>
+                                            <br />
+                                            <Button type="submit" disabled={isSubmitting}>Submit</Button>
+                                        </Form>
+                                    )}
+                                </Formik>
                                 <ul>
                                     <li>Disable remote channel creation</li>
-                                    <li>Enable or disable storing of log messages</li>
                                     <li>Enable/disable white listing of clients by IP or potentially MAC address (if available)</li>
                                 </ul>
                             </Col>

@@ -16,6 +16,8 @@ using System.Security.Cryptography;
 using OpenMSM.Web.Hubs;
 using OpenMSM.Web.Middleware;
 using Microsoft.Extensions.Logging;
+using SoapCore;
+using System.ServiceModel;
 
 namespace OpenMSM.Web
 {
@@ -46,7 +48,11 @@ namespace OpenMSM.Web
             services.AddScoped<ConsumerRequestService>();
             services.AddScoped<ProviderRequestService>();
             services.AddScoped<NotificationService>();
+            services.AddScoped<PingService>();
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+            services.AddSoapCore();
+
             services.AddMvc().AddJsonOptions(options =>
             {
                 options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
@@ -95,6 +101,13 @@ namespace OpenMSM.Web
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
+            app.UseSoapEndpoint<PingService>("/PingService.svc", binding: new BasicHttpBinding(), SoapSerializer.DataContractSerializer);
+            app.UseSoapEndpoint<ChannelManagementService>("/ChannelManagementService.asmx", binding: new BasicHttpBinding(), SoapSerializer.XmlSerializer);
+            app.UseSoapEndpoint<ConsumerPublicationService>("/ConsumerPublicationService.asmx", binding: new BasicHttpBinding(), SoapSerializer.XmlSerializer);
+            app.UseSoapEndpoint<ConsumerRequestService>("/ConsumerRequestService.asmx", binding: new BasicHttpBinding(), SoapSerializer.XmlSerializer);
+            app.UseSoapEndpoint<NotificationService>("/NotificationService.asmx", binding: new BasicHttpBinding(), SoapSerializer.XmlSerializer);
+            app.UseSoapEndpoint<ProviderPublicationService>("/ProviderPublicationService.asmx", binding: new BasicHttpBinding(), SoapSerializer.XmlSerializer);
+            app.UseSoapEndpoint<ProviderRequestService>("/ProviderRequestService.asmx", binding: new BasicHttpBinding(), SoapSerializer.XmlSerializer);
             app.UseRequestResponseLogging();
             app.UseMvc();
             
@@ -111,6 +124,8 @@ namespace OpenMSM.Web
                     spa.UseReactDevelopmentServer(npmScript: "start");
                 }
             });
+
+
             ConfigureApplicationSalt();
         }
 

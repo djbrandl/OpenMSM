@@ -44,17 +44,14 @@ const channelApiFunctions = {
                 "Content-Type": "application/json"
             }
         };
-        try {
-            const response = await fetch(url, options);
-            const channels = await response.json();
-            if (dispatch) {
-                dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
-            }
-            return channels;
+        const response = await fetch(url, options);
+        console.log(response);
+        const channels = await response.json();
+        console.log(channels);
+        if (dispatch) {
+            dispatch({ type: SET_LAST_API_HEADER, lastApiCallUrl: url, lastApiCallDetails: options, lastApiResponse: buildResponse(response) });
         }
-        catch (e) {
-
-        }
+        return channels;
     },
     createChannel: async (object, dispatch) => {
         const url = 'api/channels/';

@@ -1,16 +1,16 @@
 ﻿using AutoMapper;
 using OpenMSM.Data;
 using OpenMSM.Data.Models;
-using OpenMSM.ServiceDefinitions;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Xml;
 using System.Xml.XPath;
+using System.ServiceModel;
+using www.openoandm.org.wsisbm;
 
 namespace OpenMSM.Web.Services
 {
@@ -72,24 +72,24 @@ namespace OpenMSM.Web.Services
         {
             if (string.IsNullOrWhiteSpace(sessionID))
             {
-                throw new SessionFaultException("SessionID cannot be null or empty.", new ArgumentNullException("SessionID"));
+                throw new FaultException<SessionFault>(new SessionFault(), new FaultReason("SessionID cannot be null or empty."), new FaultCode("Sender"), string.Empty);
             }
             var session = GetSessionById(new Guid(sessionID));
             if (session == null)
             {
-                throw new SessionFaultException("A session with the specified ID does not exist.");
+                throw new FaultException<SessionFault>(new SessionFault(), new FaultReason("A session with the specified ID does not exist."), new FaultCode("Sender"), string.Empty);
             }
             if (session.Type != requiredType)
             {
-                throw new SessionFaultException("The session specified is not of the correct type for this action.");
+                throw new FaultException<SessionFault>(new SessionFault(), new FaultReason("The session specified is not of the correct type for this action."), new FaultCode("Sender"), string.Empty);
             }
             if (session.IsClosed)
             {
-                throw new SessionFaultException("The session specified is closed.");
+                throw new FaultException<SessionFault>(new SessionFault(), new FaultReason("The session specified is closed."), new FaultCode("Sender"), string.Empty);
             }
             if (!DoPermissionsMatchSession(session))
             {
-                throw new SessionFaultException("Provided header security token does not match the token assigned to the session's channel.");
+                throw new FaultException<SessionFault>(new SessionFault(), new FaultReason("Provided header security token does not match the token assigned to the session's channel."), new FaultCode("Sender"), string.Empty);
             }
             return session;
         }
@@ -106,12 +106,12 @@ namespace OpenMSM.Web.Services
                 var expr = XPathExpression.Compile(xPathExpression);
                 if (new XPathResultType[] { XPathResultType.Any, XPathResultType.Error, XPathResultType.Navigator }.Contains(expr.ReturnType))
                 {
-                    throw new SessionFaultException("Current implementation does not handle XPathExpressions which return XPathResultType.Any/Error/Navigator.");
+                    throw new FaultException<SessionFault>(new SessionFault(), new FaultReason("Current implementation does not handle XPathExpressions which return XPathResultType.Any/Error/Navigator."), new FaultCode("Receiver"), string.Empty);
                 }
             }
             catch (XPathException)
             {
-                throw new SessionFaultException("Provided XPathExpression does not compile or is not a valid XPathExpression.");
+                throw new FaultException<SessionFault>(new SessionFault(), new FaultReason("Provided XPathExpression does not compile or is not a valid XPathExpression."), new FaultCode("Sender"), string.Empty);
             }
         }
 

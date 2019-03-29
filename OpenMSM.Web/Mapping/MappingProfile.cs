@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using OpenMSM.ServiceDefinitions;
+using OpenMSM.Data.Models;
 
 namespace OpenMSM.Web.Mapping
 {
@@ -7,18 +7,18 @@ namespace OpenMSM.Web.Mapping
     {
         public MappingProfile()
         {
-            CreateMap<OpenMSM.Data.Models.Channel, OpenMSM.ServiceDefinitions.Channel>()
+            CreateMap<OpenMSM.Data.Models.Channel, OpenMSM.Web.ServiceDefinitions.Channel>()
                 .IgnoreAllVirtual()
                 .ForMember(m => m.ChannelDescription, opt => opt.MapFrom(m => m.Description))
-                .ForMember(m => m.ChannelType, opt => opt.MapFrom(m => (ChannelType)m.Type))
+                .ForMember(m => m.ChannelType, opt => opt.MapFrom(m => m.Type))
                 .ForMember(m => m.ChannelURI, opt => opt.MapFrom(m => m.URI));
 
-            CreateMap<OpenMSM.ServiceDefinitions.Channel, OpenMSM.Web.Models.Channel>()
+            CreateMap<OpenMSM.Web.ServiceDefinitions.Channel, OpenMSM.Web.Models.Channel>()
                 .ForMember(m => m.Description, opt => opt.MapFrom(m => m.ChannelDescription))
                 .ForMember(m => m.Uri, opt => opt.MapFrom(m => m.ChannelURI))
                 .ForMember(m => m.Type, opt => opt.MapFrom(m => m.ChannelType));
 
-            CreateMap<OpenMSM.Data.Models.Channel, OpenMSM.Web.Models.Channel>().ForMember(m => m.Type, opt => opt.MapFrom(m => (ChannelType)m.Type));
+            CreateMap<OpenMSM.Data.Models.Channel, OpenMSM.Web.Models.Channel>().ForMember(m => m.Type, opt => opt.MapFrom(m => m.Type));
         }
     }
 }

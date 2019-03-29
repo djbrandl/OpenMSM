@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using OpenMSM.Data;
 using OpenMSM.Data.Models;
-using OpenMSM.ServiceDefinitions;
+using OpenMSM.Web.ServiceDefinitions;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -9,10 +9,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
+using System.ServiceModel;
+using www.openoandm.org.wsisbm;
 
 namespace OpenMSM.Web.Services
 {
-    public class ConsumerRequestService : ServiceBase, IConsumerRequestServiceSoap
+    public class ConsumerRequestService : ServiceBase, IConsumerRequestService
     {
         public ConsumerRequestService(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper) { }
 
@@ -33,6 +35,11 @@ namespace OpenMSM.Web.Services
             this.appDbContext.SaveChanges();
         }
 
+        public Task CloseConsumerRequestSessionAsync(string SessionID)
+        {
+            return Task.Factory.StartNew(() => CloseConsumerRequestSession(SessionID));
+        }
+
         public void ExpireRequest(string SessionID, string MessageID)
         {
             var session = CheckSession(SessionID, SessionType.Requester);
@@ -46,24 +53,29 @@ namespace OpenMSM.Web.Services
             appDbContext.SaveChanges();
         }
 
+        public Task ExpireRequestAsync(string SessionID, string MessageID)
+        {
+            return Task.Factory.StartNew(() => ExpireRequest(SessionID, MessageID));
+        }
+
         public string OpenConsumerRequestSession(string ChannelURI, string ListenerURL)
         {
             if (string.IsNullOrWhiteSpace(ChannelURI))
             {
-                throw new ChannelFaultException("ChannelURI cannot be null or empty.", new ArgumentNullException("ChannelURI"));
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("ChannelURI cannot be null or empty."), new FaultCode("Sender"), string.Empty);
             }
             var channel = GetChannelByUri(ChannelURI);
             if (channel == null)
             {
-                throw new ChannelFaultException("A channel with the specified URI does not exist.");
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("A channel with the specified URI does not exist."), new FaultCode("Sender"), string.Empty);
             }
             if (!DoPermissionsMatchChannel(channel))
             {
-                throw new ChannelFaultException("Provided header security token does not match the token assigned to the channel.");
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("Provided header security token does not match the token assigned to the channel."), new FaultCode("Sender"), string.Empty);
             }
             if (channel.Type != OpenMSM.Data.Models.ChannelType.Request)
             {
-                throw new OperationFaultException("Channel type is not of type 'Request'.");
+                throw new FaultException<OperationFault>(new OperationFault(), new FaultReason("Channel type is not of type 'Request'."), new FaultCode("Sender"), string.Empty);
             }
             var session = new Session
             {
@@ -74,24 +86,31 @@ namespace OpenMSM.Web.Services
 
             this.appDbContext.Set<Session>().Add(session);
             this.appDbContext.SaveChanges();
-            return session.Id.ToString();            
+            return session.Id.ToString();
         }
 
-        public string PostRequest(string SessionID, XmlElement MessageContent, string Topic, [XmlElement(DataType = "duration")] string Expiry)
+        [return: MessageParameter(Name = "SessionID")]
+        public Task<string> OpenConsumerRequestSessionAsync(string ChannelURI, string ListenerURL)
         {
-            var session = CheckSession(SessionID, SessionType.Requester);
+            return Task.Factory.StartNew(() => OpenConsumerRequestSession(ChannelURI, ListenerURL));
+        }
+        
+        [return: MessageParameter(Name = "MessageID")]
+        public PostRequestResponse PostRequest(PostRequestRequest request)
+        {
+            var session = CheckSession(request.SessionID, SessionType.Requester);
 
             // get the responder sessions
             var responderSessions = this.appDbContext.Set<Session>().Include(m => m.SessionTopics)
                 .Where(m => m.Type == SessionType.Responder && m.ChannelId == session.ChannelId).ToList();
 
             // filter the sessions so that we only get subscribers that have any of the same topics as the posted message
-            responderSessions.RemoveAll(m => !m.SessionTopics.Select(v => v.Topic).Contains(Topic));
-            
+            responderSessions.RemoveAll(m => !m.SessionTopics.Select(v => v.Topic).Contains(request.Topic));
+
             DateTime? expiration = null;
-            if (!string.IsNullOrWhiteSpace(Expiry))
+            if (!string.IsNullOrWhiteSpace(request.Expiry))
             {
-                var expirationTimeSpan = XmlConvert.ToTimeSpan(Expiry);
+                var expirationTimeSpan = XmlConvert.ToTimeSpan(request.Expiry);
                 expiration = DateTime.UtcNow.Add(expirationTimeSpan);
             }
             // create a message
@@ -101,11 +120,11 @@ namespace OpenMSM.Web.Services
                 CreatedBySessionId = session.Id,
                 ExpiresOn = expiration,
                 Type = MessageType.Request,
-                MessageBody = MessageContent.OuterXml
+                MessageBody = request.MessageContent.OuterXml
             };
-            if (!string.IsNullOrWhiteSpace(Topic))
+            if (!string.IsNullOrWhiteSpace(request.Topic))
             {
-                message.MessageTopics = new[] { new MessageTopic { Topic = Topic } };
+                message.MessageTopics = new[] { new MessageTopic { Topic = request.Topic } };
             }
 
             // link responder sessions to the new message
@@ -117,7 +136,16 @@ namespace OpenMSM.Web.Services
             this.appDbContext.Add(message);
             this.appDbContext.SaveChanges();
 
-            return message.Id.ToString();
+            var response = new PostRequestResponse
+            {
+                MessageID = message.Id.ToString()
+            };
+            return response;
+        }
+
+        public Task<PostRequestResponse> PostRequestAsync(PostRequestRequest request)
+        {
+            return Task.Factory.StartNew(() => PostRequest(request));
         }
 
         public ResponseMessage ReadResponse(string SessionID, string RequestMessageID)
@@ -145,6 +173,12 @@ namespace OpenMSM.Web.Services
             };
         }
 
+        [return: MessageParameter(Name = "ResponseMessage")]
+        public Task<ResponseMessage> ReadResponseAsync(string SessionID, string RequestMessageID)
+        {
+            return Task.Factory.StartNew(() => ReadResponse(SessionID, RequestMessageID));
+        }
+
         public void RemoveResponse(string SessionID, string RequestMessageID)
         {
             var session = CheckSession(SessionID, SessionType.Requester);
@@ -159,6 +193,11 @@ namespace OpenMSM.Web.Services
 
             appDbContext.Remove(messageSession);
             appDbContext.SaveChanges();
+        }
+
+        public Task RemoveResponseAsync(string SessionID, string RequestMessageID)
+        {
+            return Task.Factory.StartNew(() => RemoveResponse(SessionID, RequestMessageID));
         }
     }
 }

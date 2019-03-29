@@ -1,19 +1,19 @@
 ﻿using AutoMapper;
 using OpenMSM.Data;
 using OpenMSM.Data.Models;
-using OpenMSM.ServiceDefinitions;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
-using System.Xml.XPath;
+using OpenMSM.Web.ServiceDefinitions;
+using System.ServiceModel;
+using System.Threading.Tasks;
+using www.openoandm.org.wsisbm;
 
 namespace OpenMSM.Web.Services
 {
-    public class ProviderRequestService : ServiceBase, IProviderRequestServiceSoap
+    public class ProviderRequestService : ServiceBase, IProviderRequestService
     {
         public ProviderRequestService(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper) { }
 
@@ -34,39 +34,45 @@ namespace OpenMSM.Web.Services
             this.appDbContext.SaveChanges();
         }
 
-        public string OpenProviderRequestSession(string ChannelURI, [XmlElement("Topic")] string[] Topic, string ListenerURL, string XPathExpression, [XmlElement("XPathNamespace")] Namespace[] XPathNamespace)
+        public Task CloseProviderRequestSessionAsync(string SessionID)
         {
-            if (string.IsNullOrWhiteSpace(ChannelURI))
+            return Task.Factory.StartNew(() => CloseProviderRequestSession(SessionID));
+        }
+
+        [return: MessageParameter(Name = "SessionID")]
+        public OpenProviderRequestSessionResponse OpenProviderRequestSession(OpenProviderRequestSessionRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.ChannelURI))
             {
-                throw new ChannelFaultException("ChannelURI cannot be null or empty.", new ArgumentNullException("ChannelURI"));
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("ChannelURI cannot be null or empty."), new FaultCode("Sender"), string.Empty);
             }
-            var channel = GetChannelByUri(ChannelURI);
+            var channel = GetChannelByUri(request.ChannelURI);
             if (channel == null)
             {
-                throw new ChannelFaultException("A channel with the specified URI does not exist.");
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("A channel with the specified URI does not exist."), new FaultCode("Sender"), string.Empty);
             }
             if (!DoPermissionsMatchChannel(channel))
             {
-                throw new ChannelFaultException("Provided header security token does not match the token assigned to the channel.");
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("Provided header security token does not match the token assigned to the channel."), new FaultCode("Sender"), string.Empty);
             }
             if (channel.Type != OpenMSM.Data.Models.ChannelType.Request)
             {
-                throw new OperationFaultException("Channel type is not of type 'Request'.");
+                throw new FaultException<OperationFault>(new OperationFault(), new FaultReason("Channel type is not of type 'Request'."), new FaultCode("Sender"), string.Empty);
             }
-            ValidateXPath(XPathExpression);
+            ValidateXPath(request.XPathExpression);
 
             var session = new Session
             {
                 Type = SessionType.Responder,
                 ChannelId = channel.Id,
-                ListenerURI = ListenerURL,
-                XPathExpression = XPathExpression,
-                SessionNamespaces = XPathNamespace == null ? new SessionNamespace[0] : XPathNamespace.Select(m => new SessionNamespace
+                ListenerURI = request.ListenerURL,
+                XPathExpression = request.XPathExpression,
+                SessionNamespaces = request.XPathNamespace == null ? new SessionNamespace[0] : request.XPathNamespace.Select(m => new SessionNamespace
                 {
                     Name = m.NamespaceName,
                     Prefix = m.NamespacePrefix
                 }).ToArray(),
-                SessionTopics = Topic == null ? new SessionTopic[0] : Topic.Select(m => new SessionTopic
+                SessionTopics = request.Topic == null ? new SessionTopic[0] : request.Topic.Select(m => new SessionTopic
                 {
                     Topic = m
                 }).ToArray()
@@ -74,7 +80,12 @@ namespace OpenMSM.Web.Services
 
             appDbContext.Add(session);
             appDbContext.SaveChanges();
-            return session.Id.ToString();
+            return new OpenProviderRequestSessionResponse { SessionID = session.Id.ToString() };
+        }
+
+        public Task<OpenProviderRequestSessionResponse> OpenProviderRequestSessionAsync(OpenProviderRequestSessionRequest request)
+        {
+            return Task.Factory.StartNew(() => OpenProviderRequestSession(request));
         }
 
         public string PostResponse(string SessionID, string RequestMessageID, XmlElement MessageContent)
@@ -100,11 +111,17 @@ namespace OpenMSM.Web.Services
                 MessageBody = MessageContent.OuterXml,
                 MessagesSessions = new[] { new MessagesSession { SessionId = requestingMessage.CreatedBySessionId } } // associate the message to the original requesting message sssion
             };
-            
+
             this.appDbContext.Add(message);
             this.appDbContext.SaveChanges();
 
             return message.Id.ToString();
+        }
+
+        [return: MessageParameter(Name = "MessageID")]
+        public Task<string> PostResponseAsync(string SessionID, string RequestMessageID, XmlElement MessageContent)
+        {
+            return Task.Factory.StartNew(() => PostResponse(SessionID, RequestMessageID, MessageContent));
         }
 
         public RequestMessage ReadRequest(string SessionID)
@@ -134,6 +151,12 @@ namespace OpenMSM.Web.Services
             };
         }
 
+        [return: MessageParameter(Name = "RequestMessage")]
+        public Task<RequestMessage> ReadRequestAsync(string SessionID)
+        {
+            return Task.Factory.StartNew(() => ReadRequest(SessionID));
+        }
+
         public void RemoveRequest(string SessionID)
         {
             var session = CheckSession(SessionID, SessionType.Responder);
@@ -148,6 +171,11 @@ namespace OpenMSM.Web.Services
 
             appDbContext.Remove(messageSession);
             appDbContext.SaveChanges();
+        }
+
+        public Task RemoveRequestAsync(string SessionID)
+        {
+            return Task.Factory.StartNew(() => RemoveRequest(SessionID));
         }
     }
 }

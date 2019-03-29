@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenMSM.Data;
 using OpenMSM.Data.Models;
@@ -16,29 +17,26 @@ namespace OpenMSM.Web.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger _logger;
-        private readonly AppDbContext _appDbContext;
         private readonly IHubContext<AdminHub> _hubContext;
 
         public RequestResponseLoggingMiddleware(RequestDelegate next,
                                                 ILoggerFactory loggerFactory,
-                                                IHubContext<AdminHub> hubContext,
-                                                AppDbContext appDbContext)
+                                                IHubContext<AdminHub> hubContext)
         {
             _next = next;
             _logger = loggerFactory
                       .CreateLogger<RequestResponseLoggingMiddleware>();
             _hubContext = hubContext;
-            _appDbContext = appDbContext;
         }
 
-        public async Task Invoke(HttpContext context)
+        public async Task Invoke(HttpContext context, IServiceProvider serviceProvider)
         {
             if (!context.Request.Path.StartsWithSegments(new PathString("/api")))
             {
                 await _next(context);
                 return;
             }
-            
+
             var originalBodyStream = context.Response.Body;
 
             // create a new request stream
@@ -50,7 +48,7 @@ namespace OpenMSM.Web.Middleware
                 // handle request
                 // evaluate and copy the request body our new memory stream
                 await context.Request.Body.CopyToAsync(requestStream);
-                
+
                 // set the stream position to 0
                 requestStream.Seek(0, SeekOrigin.Begin);
 
@@ -84,15 +82,26 @@ namespace OpenMSM.Web.Middleware
                 message.ResponseBody = text;
                 message.RespondedOn = DateTime.UtcNow;
                 await _hubContext.Clients.All.SendAsync(AdminHub.ActionOccurred, message);
-                if(_appDbContext.Configuration != null && _appDbContext.Configuration.StoreLogMessages)
+                using (var newScope = serviceProvider.CreateScope())
                 {
-                    var messageCount = _appDbContext.LogApiMessages.Count();
-                    if(_appDbContext.Configuration.NumberOfMessagesToStore >= 0 && messageCount >= _appDbContext.Configuration.NumberOfMessagesToStore)
+                    var appDbContext = newScope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+                    if (appDbContext.Configuration != null && appDbContext.Configuration.StoreLogMessages)
                     {
-                        _appDbContext.LogApiMessages.Remove(_appDbContext.LogApiMessages.OrderByDescending(m => m.RespondedOn).FirstOrDefault());
+                        appDbContext.LogApiMessages.Add(message);
+                        var messageCount = appDbContext.LogApiMessages.Count();
+                        if (appDbContext.Configuration.NumberOfMessagesToStore >= 0 && messageCount >= appDbContext.Configuration.NumberOfMessagesToStore)
+                        {
+                            var diff = messageCount - appDbContext.Configuration.NumberOfMessagesToStore;
+                            // skipping 1 less since we are adding one more (which is not evaluated with the count method above since it is not recognized by the data context yet)
+                            var messagesToDelete = appDbContext.LogApiMessages.OrderByDescending(m => m.RespondedOn).Skip(appDbContext.Configuration.NumberOfMessagesToStore - 1).ToList();
+                            foreach (var messageToDelete in messagesToDelete)
+                            {
+                                appDbContext.LogApiMessages.Remove(messageToDelete);
+                            }
+                        }
+                        appDbContext.SaveChanges();
                     }
-                    _appDbContext.LogApiMessages.Add(message);
-                    _appDbContext.SaveChanges();
                 }
                 await responseStream.CopyToAsync(originalBodyStream);
             }

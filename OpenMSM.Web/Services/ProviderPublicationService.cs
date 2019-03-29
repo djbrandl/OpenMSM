@@ -1,21 +1,22 @@
 ﻿using AutoMapper;
 using OpenMSM.Data;
 using OpenMSM.Data.Models;
-using OpenMSM.ServiceDefinitions;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
+using OpenMSM.Web.ServiceDefinitions;
+using System.ServiceModel;
+using System.Threading.Tasks;
+using www.openoandm.org.wsisbm;
 
 namespace OpenMSM.Web.Services
 {
-    public class ProviderPublicationService : ServiceBase, IProviderPublicationServiceSoap
+    public class ProviderPublicationService : ServiceBase, IProviderPublicationService
     {
         public ProviderPublicationService(AppDbContext dbContext, IMapper mapper) : base(dbContext, mapper) { }
-        
+
         public void ClosePublicationSession(string SessionID)
         {
             var session = CheckSession(SessionID, SessionType.Publisher);
@@ -25,12 +26,17 @@ namespace OpenMSM.Web.Services
             var messages = this.appDbContext.Set<Message>().Where(m => m.CreatedBySessionId == session.Id).ToList();
 
             // expire every message for the session that is not already expired
-            foreach(var message in messages.Where(m => !m.ExpiredByCreatorOn.HasValue))
+            foreach (var message in messages.Where(m => !m.ExpiredByCreatorOn.HasValue))
             {
                 message.ExpiredByCreatorOn = DateTime.UtcNow;
             }
 
             this.appDbContext.SaveChanges();
+        }
+
+        public Task ClosePublicationSessionAsync(string SessionID)
+        {
+            return Task.Factory.StartNew(() => ClosePublicationSession(SessionID));
         }
 
         public void ExpirePublication(string SessionID, string MessageID)
@@ -46,24 +52,29 @@ namespace OpenMSM.Web.Services
             appDbContext.SaveChanges();
         }
 
+        public Task ExpirePublicationAsync(string SessionID, string MessageID)
+        {
+            return Task.Factory.StartNew(() => ExpirePublication(SessionID, MessageID));
+        }
+
         public string OpenPublicationSession(string ChannelURI)
         {
             if (string.IsNullOrWhiteSpace(ChannelURI))
             {
-                throw new ChannelFaultException("ChannelURI cannot be null or empty.", new ArgumentNullException("ChannelURI"));
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("ChannelURI cannot be null or empty."), new FaultCode("Sender"), string.Empty);
             }
             var channel = GetChannelByUri(ChannelURI);
             if (channel == null)
             {
-                throw new ChannelFaultException("A channel with the specified URI does not exist.");
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("A channel with the specified URI does not exist."), new FaultCode("Sender"), string.Empty);
             }
             if (!DoPermissionsMatchChannel(channel))
             {
-                throw new ChannelFaultException("Provided header security token does not match the token assigned to the channel.");
+                throw new FaultException<ChannelFault>(new ChannelFault(), new FaultReason("Provided header security token does not match the token assigned to the channel."), new FaultCode("Sender"), string.Empty);
             }
             if (channel.Type != OpenMSM.Data.Models.ChannelType.Publication)
             {
-                throw new OperationFaultException("Channel type is not of type \"Publication\".");
+                throw new FaultException<OperationFault>(new OperationFault(), new FaultReason("Channel type is not of type 'Publication'."), new FaultCode("Sender"), string.Empty);
             }
             var session = new Session
             {
@@ -75,20 +86,27 @@ namespace OpenMSM.Web.Services
             return session.Id.ToString();
         }
 
-        public string PostPublication(string SessionID, XmlElement MessageContent, [XmlElement("Topic")] string[] Topic, [XmlElement(DataType = "duration")] string Expiry)
+        [return: MessageParameter(Name = "SessionID")]
+        public Task<string> OpenPublicationSessionAsync(string ChannelURI)
         {
-            var session = CheckSession(SessionID, SessionType.Publisher);
+            return Task.Factory.StartNew(() => OpenPublicationSession(ChannelURI));
+        }
+
+        [return: MessageParameter(Name = "MessageID")]
+        public PostPublicationResponse PostPublication(PostPublicationRequest request)
+        {
+            var session = CheckSession(request.SessionID, SessionType.Publisher);
 
             // get all subscribers for this session
             var subscriberSessions = this.appDbContext.Set<Session>().Include(m => m.SessionTopics)
                 .Where(m => m.Type == SessionType.Subscriber && m.ChannelId == session.ChannelId).ToList();
 
             // filter the sessions so that we only get subscribers that have any of the same topics as the posted message
-            subscriberSessions = subscriberSessions.Where(m => m.SessionTopics.Select(v => v.Topic).Intersect(Topic).Any()).ToList();
+            subscriberSessions = subscriberSessions.Where(m => m.SessionTopics.Select(v => v.Topic).Intersect(request.Topic).Any()).ToList();
             DateTime? expiration = null;
-            if (!string.IsNullOrWhiteSpace(Expiry))
+            if (!string.IsNullOrWhiteSpace(request.Expiry))
             {
-                var expirationTimeSpan = XmlConvert.ToTimeSpan(Expiry);
+                var expirationTimeSpan = XmlConvert.ToTimeSpan(request.Expiry);
                 expiration = DateTime.UtcNow.Add(expirationTimeSpan);
             }
             // create a message
@@ -98,8 +116,8 @@ namespace OpenMSM.Web.Services
                 CreatedBySessionId = session.Id,
                 ExpiresOn = expiration,
                 Type = MessageType.Publication,
-                MessageBody = MessageContent.OuterXml,
-                MessageTopics = Topic.Select(m =>
+                MessageBody = request.MessageContent.OuterXml,
+                MessageTopics = request.Topic.Select(m =>
                     new MessageTopic
                     {
                         Topic = m
@@ -115,7 +133,12 @@ namespace OpenMSM.Web.Services
             this.appDbContext.Add(message);
             this.appDbContext.SaveChanges();
 
-            return message.Id.ToString();
+            return new PostPublicationResponse { MessageID = message.Id.ToString() };
+        }
+
+        public Task<PostPublicationResponse> PostPublicationAsync(PostPublicationRequest request)
+        {
+            return Task.Factory.StartNew(() => PostPublication(request));
         }
     }
 }

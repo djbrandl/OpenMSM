@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
 using AutoMapper;
-using OpenMSM.ServiceDefinitions;
+using OpenMSM.Web.ServiceDefinitions;
 using OpenMSM.Web.Models;
 using OpenMSM.Web.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using www.openoandm.org.wsisbm;
+using System.ServiceModel;
 
 namespace OpenMSM.Web.Controllers
 {
@@ -42,13 +44,13 @@ namespace OpenMSM.Web.Controllers
 
         #region Private Methods
 
-        private IActionResult HandleChannelFault(ChannelFaultException e)
+        private IActionResult HandleChannelFault(FaultException<ChannelFault> e)
         {
-            if (e.Message.IndexOf("Provided header security token") >= 0)
+            if (e.Reason.ToString().IndexOf("Provided header security token") >= 0)
             {
-                return Unauthorized(new { message = e.Message });
+                return Unauthorized(new { message = e.Reason.ToString() });
             }
-            return NotFound(new { message = e.Message });
+            return NotFound(new { message = e.Reason.ToString() });
         }
 
         private IActionResult GenericOpenSession(Func<Session> action)
@@ -61,13 +63,13 @@ namespace OpenMSM.Web.Controllers
                 // This is set for semantic purposes for the "Location" header that is returned.
                 return Created(new Uri(Url.Link("CloseSession", new { sessionId = session.Id })), session);
             }
-            catch (ChannelFaultException e)
+            catch (FaultException<ChannelFault> e)
             {
                 return HandleChannelFault(e);
             }
-            catch (OperationFaultException e)
+            catch (FaultException<OperationFault> e)
             {
-                return UnprocessableEntity(new { message = e.Message });
+                return UnprocessableEntity(new { message = e.Reason.ToString() });
             }
         }
 
@@ -90,7 +92,7 @@ namespace OpenMSM.Web.Controllers
                 var channel = _channelManagementService.GetChannel(System.Net.WebUtility.UrlDecode(channelUri).Trim());
                 return Ok(Mapper.Map<OpenMSM.Web.Models.Channel>(channel));
             }
-            catch (ChannelFaultException e)
+            catch (FaultException<ChannelFault> e)
             {
                 return HandleChannelFault(e);
             }
@@ -113,13 +115,16 @@ namespace OpenMSM.Web.Controllers
             try
             {
                 var tokens = channel.SecurityTokens == null ? new XmlElement[0] : channel.SecurityTokens.Select(m => m.Token).Where(m => !string.IsNullOrWhiteSpace(m)).ToXmlElements();
-                _channelManagementService.CreateChannel(channel.Uri.Trim(),
-                    channel.Type == Models.ChannelType.Publication ? ServiceDefinitions.ChannelType.Publication : ServiceDefinitions.ChannelType.Request,
-                    channel.Description,
-                    tokens);
+                _channelManagementService.CreateChannel(new CreateChannelRequest
+                {
+                    ChannelURI = channel.Uri.Trim(),
+                    ChannelType = channel.Type == Models.ChannelType.Publication ? ServiceDefinitions.ChannelType.Publication : ServiceDefinitions.ChannelType.Request,
+                    ChannelDescription = channel.Description,
+                    SecurityToken = tokens
+                });
                 return Created(string.Empty, null);
             }
-            catch (ChannelFaultException e)
+            catch (FaultException<ChannelFault> e)
             {
                 return HandleChannelFault(e);
             }
@@ -136,7 +141,7 @@ namespace OpenMSM.Web.Controllers
                 _channelManagementService.DeleteChannel(System.Net.WebUtility.UrlDecode(channelUri).Trim());
                 return NoContent();
             }
-            catch (ChannelFaultException e)
+            catch (FaultException<ChannelFault> e)
             {
                 return HandleChannelFault(e);
             }
@@ -151,10 +156,14 @@ namespace OpenMSM.Web.Controllers
             try
             {
                 var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
-                _channelManagementService.AddSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri).Trim(), tokens);
+                _channelManagementService.AddSecurityTokens(new AddSecurityTokensRequest
+                {
+                    ChannelURI = System.Net.WebUtility.UrlDecode(channelUri).Trim(),
+                    SecurityToken = tokens
+                });
                 return Created(new Uri(Url.Link("AddSecurityTokens", new { channelUri })), null);
             }
-            catch (ChannelFaultException e)
+            catch (FaultException<ChannelFault> e)
             {
                 return HandleChannelFault(e);
             }
@@ -169,10 +178,14 @@ namespace OpenMSM.Web.Controllers
             try
             {
                 var tokens = securityTokens.Select(m => m.Token).ToXmlElements();
-                _channelManagementService.RemoveSecurityTokens(System.Net.WebUtility.UrlDecode(channelUri).Trim(), tokens);
+                _channelManagementService.RemoveSecurityTokens(new RemoveSecurityTokensRequest
+                {
+                    ChannelURI = System.Net.WebUtility.UrlDecode(channelUri).Trim(),
+                    SecurityToken = tokens
+                });
                 return NoContent();
             }
-            catch (ChannelFaultException e)
+            catch (FaultException<ChannelFault> e)
             {
                 return HandleChannelFault(e);
             }
@@ -218,14 +231,17 @@ namespace OpenMSM.Web.Controllers
             }
             return GenericOpenSession(() =>
             {
-                var sessionId = _consumerPublicationService
-                    .OpenSubscriptionSession(channelUri.Trim(),
-                        session.Topics,
-                        session.ListenerUrl,
-                        session.XPathExpression,
-                        session.XPathNamespaces.Select(m => new Namespace { NamespaceName = m.Namespace, NamespacePrefix = m.Prefix }).ToArray());
+                var sessionResponse = _consumerPublicationService
+                    .OpenSubscriptionSession(new OpenSubscriptionSessionRequest
+                    {
+                        ChannelURI = channelUri.Trim(),
+                        Topic = session.Topics,
+                        ListenerURL = session.ListenerUrl,
+                        XPathExpression = session.XPathExpression,
+                        XPathNamespace = session.XPathNamespaces.Select(m => new Namespace { NamespaceName = m.Namespace, NamespacePrefix = m.Prefix }).ToArray()
+                    });
 
-                session.Id = sessionId;
+                session.Id = sessionResponse.SessionID;
                 session.Type = SessionType.PublicationConsumer;
                 return session;
             });
@@ -268,14 +284,16 @@ namespace OpenMSM.Web.Controllers
             return GenericOpenSession(() =>
             {
 
-                var sessionId = _providerRequestService.OpenProviderRequestSession(
-                        channelUri.Trim(),
-                        session.Topics,
-                        session.ListenerUrl,
-                        session.XPathExpression,
-                        session.XPathNamespaces.Select(m => new Namespace { NamespaceName = m.Namespace, NamespacePrefix = m.Prefix }).ToArray());
+                var sessionResponse = _providerRequestService.OpenProviderRequestSession(new OpenProviderRequestSessionRequest
+                {
+                    ChannelURI = channelUri.Trim(),
+                    Topic = session.Topics,
+                    ListenerURL = session.ListenerUrl,
+                    XPathExpression = session.XPathExpression,
+                    XPathNamespace = session.XPathNamespaces.Select(m => new Namespace { NamespaceName = m.Namespace, NamespacePrefix = m.Prefix }).ToArray()
+                });
 
-                session.Id = sessionId;
+                session.Id = sessionResponse.SessionID;
                 session.Type = SessionType.RequestProvider;
 
                 return session;

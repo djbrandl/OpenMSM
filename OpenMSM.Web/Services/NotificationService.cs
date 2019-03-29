@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using OpenMSM.Data;
-using OpenMSM.ServiceDefinitions;
+using OpenMSM.Web.ServiceDefinitions;
 using OpenMSM.Web.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -12,7 +12,7 @@ using System.Xml.Serialization;
 
 namespace OpenMSM.Web.Services
 {
-    public class NotificationService : INotificationServiceSoap
+    public class NotificationService : INotificationService
     {
         private IHttpClientFactory HttpClientFactory { get; set; }
         private AppDbContext AppDbContext { get; set; }
@@ -55,13 +55,14 @@ namespace OpenMSM.Web.Services
         }
 
         // THIS IS THE INTERFACE FOR WHAT IS PASSED BUT DOES NOT NEED TO BE IMPLEMENTED BY THE SERVICE PROVIDER. IT MUST BE IMPLEMENTED BY THE CLIENT
-        public void NotifyListener(string SessionID, string MessageID, [XmlElement("Topic")] string[] Topic, string RequestMessageID)
+        public NotifyListenerResponse NotifyListener(NotifyListenerRequest request)
         {
             throw new NotImplementedException();
+        }
 
-            // check topic as it cannot be used for consumer request session response notification
-
-            //RequestMessageID allows correlation with the original request and thus it MUST only be used for consumer request session response notification.
+        public Task<NotifyListenerResponse> NotifyListenerAsync(NotifyListenerRequest request)
+        {
+            throw new NotImplementedException();
         }
     }
 }
