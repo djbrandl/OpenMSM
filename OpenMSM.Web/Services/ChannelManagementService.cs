@@ -77,14 +77,6 @@ namespace OpenMSM.Web.Services
             return mapper.Map<OpenMSM.Web.ServiceDefinitions.Channel>(channel);
         }
 
-        public Channel[] GetChannels()
-        {
-            var permissionToken = this.GetAccessToken();
-            var channels = this.appDbContext.Set<OpenMSM.Data.Models.SecurityToken>().Where(m => m.Token == permissionToken).SelectMany(m => m.ChannelsSecurityTokens).Select(m => m.Channel);
-            var noSecurityChannels = this.appDbContext.Set<OpenMSM.Data.Models.Channel>().Where(m => !m.ChannelsSecurityTokens.Any());
-            return channels.Union(noSecurityChannels).Select(m => mapper.Map<OpenMSM.Web.ServiceDefinitions.Channel>(m)).ToArray();
-        }
-
         public CreateChannelResponse CreateChannel(CreateChannelRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.ChannelURI))

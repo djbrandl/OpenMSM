@@ -78,7 +78,7 @@ namespace OpenMSM.Web.Controllers
         [HttpGet]
         public IEnumerable<OpenMSM.Web.Models.Channel> Get()
         {
-            return _channelManagementService.GetChannels().Select(m => Mapper.Map<OpenMSM.Web.Models.Channel>(m));
+            return _channelManagementService.GetChannels(new GetChannelsRequest()).Channel.Select(m => Mapper.Map<OpenMSM.Web.Models.Channel>(m));
         }
 
         [HttpGet("{channelUri}")]
