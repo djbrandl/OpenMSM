@@ -5,13 +5,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Routing.Constraints;
 using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi.Models;
 using System;
-using System.Security;
 using System.Security.Cryptography;
 using OpenMSM.Web.Hubs;
 using OpenMSM.Web.Middleware;
@@ -51,7 +50,10 @@ namespace OpenMSM.Web
             services.AddScoped<PingService>();
             services.AddScoped<IMessageFilter, SOAPHeaderHandler>();
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-
+            services.AddSwaggerGen(m =>
+            {
+                m.SwaggerDoc("v1", new Swashbuckle.AspNetCore.Swagger.Info { Title = "OpenMSM API", Version = "v1" });
+            });
             services.AddSoapCore();
 
             services.AddMvc().AddJsonOptions(options =>
@@ -98,7 +100,11 @@ namespace OpenMSM.Web
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
-
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "OpenMSM V1");
+            });
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
@@ -125,7 +131,6 @@ namespace OpenMSM.Web
                     spa.UseReactDevelopmentServer(npmScript: "start");
                 }
             });
-
 
             ConfigureApplicationSalt();
         }
