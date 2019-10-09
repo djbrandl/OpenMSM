@@ -84,7 +84,7 @@ namespace OpenMSM.Web.ServiceDefinitions
         public string SessionID;
 
         [System.ServiceModel.MessageBodyMemberAttribute(Namespace = "http://www.openoandm.org/ws-isbm/", Order = 1)]
-        public System.Xml.XmlElement MessageContent;
+        public MessageContent MessageContent;
 
         [System.ServiceModel.MessageBodyMemberAttribute(Namespace = "http://www.openoandm.org/ws-isbm/", Order = 2)]
         public string Topic;
@@ -97,7 +97,7 @@ namespace OpenMSM.Web.ServiceDefinitions
         {
         }
 
-        public PostRequestRequest(string SessionID, System.Xml.XmlElement MessageContent, string Topic, string Expiry)
+        public PostRequestRequest(string SessionID, MessageContent MessageContent, string Topic, string Expiry)
         {
             this.SessionID = SessionID;
             this.MessageContent = MessageContent;
@@ -137,7 +137,7 @@ namespace OpenMSM.Web.ServiceDefinitions
 
         private string messageIDField;
 
-        private System.Xml.XmlElement messageContentField;
+        private MessageContent messageContentField;
 
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(Order = 0)]
@@ -155,7 +155,7 @@ namespace OpenMSM.Web.ServiceDefinitions
 
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(Order = 1)]
-        public System.Xml.XmlElement MessageContent
+        public MessageContent MessageContent
         {
             get
             {

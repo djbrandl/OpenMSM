@@ -66,7 +66,7 @@ namespace OpenMSM.Web.ServiceDefinitions
 
         private string messageIDField;
 
-        private System.Xml.XmlElement messageContentField;
+        private MessageContent messageContentField;
 
         private string[] topicField;
 
@@ -86,7 +86,7 @@ namespace OpenMSM.Web.ServiceDefinitions
 
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(Order = 1)]
-        public System.Xml.XmlElement MessageContent
+        public MessageContent MessageContent
         {
             get
             {

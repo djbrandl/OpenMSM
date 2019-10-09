@@ -88,7 +88,7 @@ namespace OpenMSM.Web.Services
             return Task.Factory.StartNew(() => OpenProviderRequestSession(request));
         }
 
-        public string PostResponse(string SessionID, string RequestMessageID, XmlElement MessageContent)
+        public string PostResponse(string SessionID, string RequestMessageID, MessageContent MessageContent)
         {
             var session = CheckSession(SessionID, SessionType.Responder);
 
@@ -108,7 +108,7 @@ namespace OpenMSM.Web.Services
                 CreatedBySessionId = session.Id,
                 RequestMessageId = requestingMessage.Id,
                 Type = MessageType.Response,
-                MessageBody = MessageContent.OuterXml,
+                MessageBody = this.MessageContent.OuterXml,
                 MessagesSessions = new[] { new MessagesSession { SessionId = requestingMessage.CreatedBySessionId } } // associate the message to the original requesting message sssion
             };
 
@@ -119,7 +119,7 @@ namespace OpenMSM.Web.Services
         }
 
         [return: MessageParameter(Name = "MessageID")]
-        public Task<string> PostResponseAsync(string SessionID, string RequestMessageID, XmlElement MessageContent)
+        public Task<string> PostResponseAsync(string SessionID, string RequestMessageID, MessageContent MessageContent)
         {
             return Task.Factory.StartNew(() => PostResponse(SessionID, RequestMessageID, MessageContent));
         }

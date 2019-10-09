@@ -52,11 +52,11 @@ namespace OpenMSM.Web.ServiceDefinitions
         [System.ServiceModel.FaultContractAttribute(typeof(www.openoandm.org.wsisbm.SessionFault), Action = "http://www.openoandm.org/ws-isbm/PostResponse", Name = "SessionFault")]
         [System.ServiceModel.XmlSerializerFormatAttribute()]
         [return: System.ServiceModel.MessageParameterAttribute(Name = "MessageID")]
-        string PostResponse(string SessionID, string RequestMessageID, System.Xml.XmlElement MessageContent);
+        string PostResponse(string SessionID, string RequestMessageID, MessageContent MessageContent);
 
         [System.ServiceModel.OperationContractAttribute(Action = "http://www.openoandm.org/ws-isbm/PostResponse", ReplyAction = "*")]
         [return: System.ServiceModel.MessageParameterAttribute(Name = "MessageID")]
-        System.Threading.Tasks.Task<string> PostResponseAsync(string SessionID, string RequestMessageID, System.Xml.XmlElement MessageContent);
+        System.Threading.Tasks.Task<string> PostResponseAsync(string SessionID, string RequestMessageID, MessageContent MessageContent);
 
         [System.ServiceModel.OperationContractAttribute(Action = "http://www.openoandm.org/ws-isbm/CloseProviderRequestSession", ReplyAction = "*")]
         [System.ServiceModel.FaultContractAttribute(typeof(www.openoandm.org.wsisbm.SessionFault), Action = "http://www.openoandm.org/ws-isbm/CloseProviderRequestSession", Name = "SessionFault")]
@@ -120,7 +120,7 @@ namespace OpenMSM.Web.ServiceDefinitions
 
         private string messageIDField;
 
-        private System.Xml.XmlElement messageContentField;
+        private MessageContent messageContentField;
 
         private string topicField;
 
@@ -140,7 +140,7 @@ namespace OpenMSM.Web.ServiceDefinitions
 
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(Order = 1)]
-        public System.Xml.XmlElement MessageContent
+        public MessageContent MessageContent
         {
             get
             {

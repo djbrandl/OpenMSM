@@ -56,6 +56,129 @@ namespace OpenMSM.Web.ServiceDefinitions
         System.Threading.Tasks.Task ClosePublicationSessionAsync(string SessionID);
     }
 
+
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(XMLContent))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(StringContent))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(BinaryContent))]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("svcutil", "4.7.3081.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://www.openoandm.org/ws-isbm/")]
+    public abstract partial class MessageContent
+    {
+    }
+
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("svcutil", "4.7.3081.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://www.openoandm.org/ws-isbm/")]
+    public partial class XMLContent : MessageContent
+    {
+
+        private System.Xml.XmlElement anyField;
+
+        /// <remarks/>
+        [System.Xml.Serialization.XmlAnyElementAttribute(Order = 0)]
+        public System.Xml.XmlElement Any
+        {
+            get
+            {
+                return this.anyField;
+            }
+            set
+            {
+                this.anyField = value;
+            }
+        }
+    }
+
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("svcutil", "4.7.3081.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://www.openoandm.org/ws-isbm/")]
+    public partial class StringContent : MessageContent
+    {
+
+        private string contentField;
+
+        private string mediaTypeField;
+
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order = 0)]
+        public string Content
+        {
+            get
+            {
+                return this.contentField;
+            }
+            set
+            {
+                this.contentField = value;
+            }
+        }
+
+        /// <remarks/>
+        [System.Xml.Serialization.XmlAttributeAttribute()]
+        public string mediaType
+        {
+            get
+            {
+                return this.mediaTypeField;
+            }
+            set
+            {
+                this.mediaTypeField = value;
+            }
+        }
+    }
+
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("svcutil", "4.7.3081.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://www.openoandm.org/ws-isbm/")]
+    public partial class BinaryContent : MessageContent
+    {
+
+        private byte[] contentField;
+
+        private string mediaTypeField;
+
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(DataType = "base64Binary", Order = 0)]
+        public byte[] Content
+        {
+            get
+            {
+                return this.contentField;
+            }
+            set
+            {
+                this.contentField = value;
+            }
+        }
+
+        /// <remarks/>
+        [System.Xml.Serialization.XmlAttributeAttribute()]
+        public string mediaType
+        {
+            get
+            {
+                return this.mediaTypeField;
+            }
+            set
+            {
+                this.mediaTypeField = value;
+            }
+        }
+    }
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
@@ -67,7 +190,7 @@ namespace OpenMSM.Web.ServiceDefinitions
         public string SessionID;
 
         [System.ServiceModel.MessageBodyMemberAttribute(Namespace = "http://www.openoandm.org/ws-isbm/", Order = 1)]
-        public System.Xml.XmlElement MessageContent;
+        public MessageContent MessageContent;
 
         [System.ServiceModel.MessageBodyMemberAttribute(Namespace = "http://www.openoandm.org/ws-isbm/", Order = 2)]
         [System.Xml.Serialization.XmlElementAttribute("Topic")]
@@ -81,7 +204,7 @@ namespace OpenMSM.Web.ServiceDefinitions
         {
         }
 
-        public PostPublicationRequest(string SessionID, System.Xml.XmlElement MessageContent, string[] Topic, string Expiry)
+        public PostPublicationRequest(string SessionID, MessageContent MessageContent, string[] Topic, string Expiry)
         {
             this.SessionID = SessionID;
             this.MessageContent = MessageContent;
