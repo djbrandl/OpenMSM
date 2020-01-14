@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Internal;
+//using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using OpenMSM.Web.Hubs;
@@ -97,7 +97,7 @@ namespace OpenMSM.Web.Middleware
         private async Task<string> FormatRequestToString(HttpRequest request)
         {
             var body = request.Body;
-            request.EnableRewind();
+            request.EnableBuffering(); //.EnableRewind();
 
             var buffer = new byte[Convert.ToInt32(request.ContentLength)];
             await request.Body.ReadAsync(buffer, 0, buffer.Length);

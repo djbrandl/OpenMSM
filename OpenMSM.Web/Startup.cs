@@ -16,6 +16,7 @@ using System.Security.Cryptography;
 using OpenMSM.Web.Hubs;
 using OpenMSM.Web.Middleware;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 
 namespace OpenMSM.Web
 {
@@ -47,11 +48,11 @@ namespace OpenMSM.Web
             services.AddScoped<ProviderRequestService>();
             services.AddScoped<NotificationService>();
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-            services.AddMvc().AddJsonOptions(options =>
+            services.AddMvc(options => options.EnableEndpointRouting = false).AddNewtonsoftJson(options =>
             {
                 options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
                 options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-            }).SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            }).SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
 
             var mapperConfig = new MapperConfiguration(m =>
             {
@@ -78,7 +79,7 @@ namespace OpenMSM.Web
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -97,10 +98,15 @@ namespace OpenMSM.Web
             app.UseSpaStaticFiles();
             app.UseRequestResponseLogging();
             app.UseMvc();
-            
-            app.UseSignalR(routes => {
+            app.UseRouting();
+            app.UseEndpoints(routes =>
+            {
                 routes.MapHub<OpenMSM.Web.Hubs.AdminHub>("/admin/hub");
             });
+            //app.UseSignalR(routes =>
+            //{
+            //    routes.MapHub<OpenMSM.Web.Hubs.AdminHub>("/admin/hub");
+            //});
 
             app.UseSpa(spa =>
             {
