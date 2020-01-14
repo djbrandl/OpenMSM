@@ -13,3 +13,8 @@ Prerequisites:
 Running the code:
 1) For the FIRST time that you run Visual Studio to start an instance of the application, be sure to "Run as Administrator". On startup for the first time, the application creates a machine environment variable that it must leverage and this requires elevated privileges. 
 2) Start an instance of the OpenMSM.Web project.
+
+TODO:
+1) Modify the message publishing to remove the restriction that it be XML. 
+2) Modify the message web model to include an extra object type string.
+3) Modify the underlying service to remove the same XML content restriction.

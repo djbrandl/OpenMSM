@@ -106,5 +106,36 @@ namespace OpenMSM.Web.Middleware
                 await responseStream.CopyToAsync(originalBodyStream);
             }
         }
+        private async Task FormatResponse(HttpResponse response, LogApiMessage logApiMessage)
+        {
+            response.Body.Seek(0, SeekOrigin.Begin);
+            var text = await new StreamReader(response.Body).ReadToEndAsync();
+            response.Body.Seek(0, SeekOrigin.Begin);
+
+            logApiMessage.ResponseStatus = response.StatusCode;
+            logApiMessage.ResponseBody = text;
+        }
+
+        private async Task<string> FormatRequestToString(HttpRequest request)
+        {
+            var body = request.Body;
+            request.EnableBuffering(); //.EnableRewind();
+
+            var buffer = new byte[Convert.ToInt32(request.ContentLength)];
+            await request.Body.ReadAsync(buffer, 0, buffer.Length);
+            var bodyAsText = Encoding.UTF8.GetString(buffer);
+            request.Body = body;
+
+            return $"{request.Scheme} {request.Host}{request.Path} {request.QueryString} {bodyAsText}";
+        }
+
+        private async Task<string> FormatResponseToString(HttpResponse response)
+        {
+            response.Body.Seek(0, SeekOrigin.Begin);
+            var text = await new StreamReader(response.Body).ReadToEndAsync();
+            response.Body.Seek(0, SeekOrigin.Begin);
+
+            return $"Response {text}";
+        }
     }
 }
