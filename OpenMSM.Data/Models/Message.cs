@@ -19,6 +19,7 @@ namespace OpenMSM.Data.Models
         public DateTime CreatedOn { get; set; }
         public DateTime? ExpiredByCreatorOn { get; set; }
         public string MessageBody { get; set; }
+        public string ContentType { get; set; }
         public Guid? RequestMessageId { get; set; }
 
         [NotMapped]

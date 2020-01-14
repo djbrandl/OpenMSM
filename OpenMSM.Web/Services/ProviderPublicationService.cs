@@ -109,6 +109,27 @@ namespace OpenMSM.Web.Services
                 var expirationTimeSpan = XmlConvert.ToTimeSpan(request.Expiry);
                 expiration = DateTime.UtcNow.Add(expirationTimeSpan);
             }
+            string messageBody;
+            string contentType;
+            switch (request.MessageContent)
+            {
+                case XMLContent x:
+                    messageBody = x.ToString();
+                    contentType = "application/xml";
+                    break;
+                case StringContent s:
+                    messageBody = s.ToString();
+                    contentType = "application/text";
+                    break;
+                case BinaryContent b:
+                    messageBody = b.ToString();
+                    contentType = b.mediaType;
+                    break;
+                default:
+                    messageBody = request.MessageContent.ToString();
+                    contentType = "Unknown";
+                    break;
+            }
             // create a message
             var message = new Message
             {
@@ -116,7 +137,8 @@ namespace OpenMSM.Web.Services
                 CreatedBySessionId = session.Id,
                 ExpiresOn = expiration,
                 Type = MessageType.Publication,
-                MessageBody = request.MessageContent.OuterXml,
+                MessageBody = messageBody,
+                ContentType = contentType,
                 MessageTopics = request.Topic.Select(m =>
                     new MessageTopic
                     {

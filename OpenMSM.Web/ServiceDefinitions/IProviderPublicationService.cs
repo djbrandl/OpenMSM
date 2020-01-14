@@ -79,20 +79,25 @@ namespace OpenMSM.Web.ServiceDefinitions
     public partial class XMLContent : MessageContent
     {
 
-        private System.Xml.XmlElement anyField;
+        private System.Xml.XmlElement contentField;
 
         /// <remarks/>
         [System.Xml.Serialization.XmlAnyElementAttribute(Order = 0)]
-        public System.Xml.XmlElement Any
+        public System.Xml.XmlElement Content
         {
             get
             {
-                return this.anyField;
+                return this.contentField;
             }
             set
             {
-                this.anyField = value;
+                this.contentField = value;
             }
+        }
+
+        public override string ToString()
+        {
+            return Content.OuterXml;
         }
     }
 
@@ -136,6 +141,11 @@ namespace OpenMSM.Web.ServiceDefinitions
                 this.mediaTypeField = value;
             }
         }
+
+        public override string ToString()
+        {
+            return Content;
+        }
     }
 
     /// <remarks/>
@@ -178,7 +188,12 @@ namespace OpenMSM.Web.ServiceDefinitions
                 this.mediaTypeField = value;
             }
         }
+        public override string ToString()
+        {
+            return System.Convert.ToBase64String(Content);
+        }
     }
+
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]

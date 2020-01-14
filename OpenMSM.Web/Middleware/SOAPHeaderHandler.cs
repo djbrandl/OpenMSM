@@ -1,5 +1,6 @@
 ﻿using OpenMSM.Web.Services;
 using SoapCore;
+using SoapCore.Extensibility;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;

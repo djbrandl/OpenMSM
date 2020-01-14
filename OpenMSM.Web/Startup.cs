@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using SoapCore;
 using System.ServiceModel;
 using Microsoft.Extensions.Hosting;
+using SoapCore.Extensibility;
 
 namespace OpenMSM.Web
 {
@@ -53,7 +54,7 @@ namespace OpenMSM.Web
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddSwaggerGen(m =>
             {
-                m.SwaggerDoc("v1", new Swashbuckle.AspNetCore.Swagger.Info { Title = "OpenMSM API", Version = "v1" });
+                m.SwaggerDoc("v1", new OpenApiInfo { Title = "OpenMSM API", Version = "v1" });
             });
             services.AddSoapCore();
 
